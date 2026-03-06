@@ -11,7 +11,7 @@ owner: julian + ali (+ faye support)
 
 ## 1) core agent backend (p0)
 - [x] create `/api/chat` endpoint (streaming response)
-- [ ] add conversation input schema validation (zod or equivalent)
+- [x] add conversation input schema validation (zod or equivalent)
 - [ ] implement agent loop:
   - [ ] send system prompt + conversation history to model
   - [ ] parse tool calls

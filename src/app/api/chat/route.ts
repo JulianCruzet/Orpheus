@@ -1,64 +1,45 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
-type ChatRole = "system" | "user" | "assistant";
+const chatRoleSchema = z.enum(["system", "user", "assistant"]);
 
-type ChatMessage = {
-  role: ChatRole;
-  content: string;
-};
+const chatMessageSchema = z.object({
+  role: chatRoleSchema,
+  content: z.string().trim().min(1),
+});
 
-type ChatRequestBody = {
-  messages: ChatMessage[];
-};
+const chatRequestBodySchema = z.object({
+  messages: z.array(chatMessageSchema).min(1),
+});
 
-function isValidMessage(message: unknown): message is ChatMessage {
-  if (!message || typeof message !== "object") {
-    return false;
-  }
-
-  const maybeMessage = message as Partial<ChatMessage>;
-
-  return (
-    (maybeMessage.role === "system" ||
-      maybeMessage.role === "user" ||
-      maybeMessage.role === "assistant") &&
-    typeof maybeMessage.content === "string" &&
-    maybeMessage.content.trim().length > 0
-  );
-}
+type ChatRequestBody = z.infer<typeof chatRequestBodySchema>;
 
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  let body: ChatRequestBody;
+  let rawBody: unknown;
 
   try {
-    body = (await request.json()) as ChatRequestBody;
+    rawBody = await request.json();
   } catch {
-    return Response.json(
-      { error: "Invalid JSON payload." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Invalid JSON payload." }, { status: 400 });
   }
 
-  if (!Array.isArray(body?.messages) || body.messages.length === 0) {
-    return Response.json(
-      { error: "`messages` must be a non-empty array." },
-      { status: 400 },
-    );
-  }
+  const parsed = chatRequestBodySchema.safeParse(rawBody);
 
-  if (!body.messages.every(isValidMessage)) {
+  if (!parsed.success) {
     return Response.json(
       {
         error:
-          "Each message must include a valid role (system|user|assistant) and non-empty content.",
+          "Invalid request body. `messages` must be a non-empty array of { role: system|user|assistant, content: non-empty string }.",
       },
       { status: 400 },
     );
   }
+
+  const body: ChatRequestBody = parsed.data;
 
   const lastUserMessage = [...body.messages]
     .reverse()
