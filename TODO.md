@@ -21,7 +21,7 @@ owner: julian + ali (+ faye support)
 - [ ] add graceful error handling and user-safe fallback responses
 
 ## 2) tool registry + types
-- [ ] create shared tool type definitions (`src/lib/tools/types.ts`)
+- [x] create shared tool type definitions (`src/lib/tools/types.ts`)
 - [ ] implement tool registry with metadata + handler mapping
 - [ ] add logging for each tool call (start/end/status/duration)
 - [ ] return structured tool results for consistent UI rendering
