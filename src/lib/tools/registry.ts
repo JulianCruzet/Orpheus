@@ -1,4 +1,5 @@
 import { toStructuredToolResult } from "@/lib/tools/structured-result";
+import { shopifyCreateProduct } from "@/lib/tools/shopify-create-product";
 import { shopifyListProducts } from "@/lib/tools/shopify-list-products";
 import {
   StructuredToolResult,
@@ -91,9 +92,7 @@ export const toolRegistry: ToolRegistry = {
   shopify_create_product: {
     name: "shopify_create_product",
     description: "Create a new Shopify product.",
-    handler: withToolLogging("shopify_create_product", async () =>
-      notImplemented("shopify_create_product"),
-    ),
+    handler: withToolLogging("shopify_create_product", shopifyCreateProduct),
   },
   shopify_update_product: {
     name: "shopify_update_product",
