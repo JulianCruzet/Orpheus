@@ -27,7 +27,7 @@ owner: julian + ali (+ faye support)
 - [x] return structured tool results for consistent UI rendering
 
 ## 3) shopify integration (p0)
-- [ ] create `src/lib/shopify/client.ts` with authenticated admin client
+- [x] create `src/lib/shopify/client.ts` with authenticated admin client
 - [ ] implement `shopify_list_products`
 - [ ] implement `shopify_create_product`
 - [ ] implement `shopify_update_product`
