@@ -73,7 +73,7 @@ owner: julian + ali (+ faye support)
 
 ## 7) safety + trust controls
 - [x] add confirmation step for destructive actions (delete/bulk updates)
-- [ ] add transparent action summaries before execution
+- [x] add transparent action summaries before execution
 - [ ] add undo path for reversible changes where possible
 - [ ] redact secrets from logs and responses
 

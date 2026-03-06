@@ -44,6 +44,37 @@ const DESTRUCTIVE_TOOLS = new Set([
   "shopify_manage_inventory",
 ]);
 
+function buildActionSummary(
+  toolName: string,
+  input: Record<string, unknown>,
+): string {
+  switch (toolName) {
+    case "shopify_list_products": {
+      const limit =
+        typeof input.limit === "number" && Number.isFinite(input.limit)
+          ? input.limit
+          : 10;
+      return `about to fetch up to ${limit} products from your shopify catalog.`;
+    }
+    case "shopify_create_product":
+      return "about to create a new shopify product using the generated listing details.";
+    case "shopify_update_product":
+      return "about to update an existing shopify product. this may change live storefront data.";
+    case "shopify_manage_inventory":
+      return "about to read or update inventory levels. this can affect live sellable stock.";
+    case "shopify_manage_orders":
+      return "about to fetch shopify order data for review.";
+    case "generate_product_listing":
+      return "about to generate AI product copy, tags, seo fields, and pricing suggestions.";
+    case "research_market":
+      return "about to run market research and summarize trends, pricing bands, and opportunities.";
+    case "research_competitors":
+      return "about to analyze competitor catalog and pricing/positioning patterns.";
+    default:
+      return `about to execute ${toolName}.`;
+  }
+}
+
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
@@ -260,6 +291,16 @@ export async function POST(request: NextRequest): Promise<Response> {
               encoder.encode(
                 toSseEvent("assistant_thought", {
                   text: modelStep.assistantThought,
+                }),
+              ),
+            );
+
+            controller.enqueue(
+              encoder.encode(
+                toSseEvent("action_summary", {
+                  toolName: modelStep.toolName,
+                  summary: buildActionSummary(modelStep.toolName, modelStep.input),
+                  destructive: DESTRUCTIVE_TOOLS.has(modelStep.toolName),
                 }),
               ),
             );
