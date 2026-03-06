@@ -32,7 +32,7 @@ owner: julian + ali (+ faye support)
 - [x] implement `shopify_create_product`
 - [x] implement `shopify_update_product`
 - [ ] implement `shopify_manage_inventory` (read + update)
-- [ ] implement `shopify_manage_orders` (list + detail)
+- [x] implement `shopify_manage_orders` (list + detail)
 - [ ] add retries + friendly errors for rate limits and auth failures
 
 ## 4) ai tools (p0)

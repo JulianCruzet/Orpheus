@@ -2,6 +2,7 @@ import { toStructuredToolResult } from "@/lib/tools/structured-result";
 import { shopifyCreateProduct } from "@/lib/tools/shopify-create-product";
 import { shopifyListProducts } from "@/lib/tools/shopify-list-products";
 import { shopifyUpdateProduct } from "@/lib/tools/shopify-update-product";
+import { shopifyManageOrders } from "@/lib/tools/shopify-manage-orders";
 import {
   StructuredToolResult,
   ToolDefinition,
@@ -110,9 +111,7 @@ export const toolRegistry: ToolRegistry = {
   shopify_manage_orders: {
     name: "shopify_manage_orders",
     description: "List or fetch Shopify order details.",
-    handler: withToolLogging("shopify_manage_orders", async () =>
-      notImplemented("shopify_manage_orders"),
-    ),
+    handler: withToolLogging("shopify_manage_orders", shopifyManageOrders),
   },
   generate_product_listing: {
     name: "generate_product_listing",
