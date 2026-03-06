@@ -18,7 +18,7 @@ owner: julian + ali (+ faye support)
   - [x] execute tool handlers
   - [x] return tool results to model
   - [x] continue until final assistant response
-- [ ] add graceful error handling and user-safe fallback responses
+- [x] add graceful error handling and user-safe fallback responses
 
 ## 2) tool registry + types
 - [x] create shared tool type definitions (`src/lib/tools/types.ts`)

@@ -145,88 +145,122 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      controller.enqueue(
-        encoder.encode(toSseEvent("start", { status: "streaming" })),
-      );
+      try {
+        controller.enqueue(
+          encoder.encode(toSseEvent("start", { status: "streaming" })),
+        );
 
-      const systemPrompt: ChatMessage = {
-        role: "system",
-        content:
-          "you are shams-e, an ecommerce copilot. decide whether to call a tool or answer directly.",
-      };
+        const systemPrompt: ChatMessage = {
+          role: "system",
+          content:
+            "you are shams-e, an ecommerce copilot. decide whether to call a tool or answer directly.",
+        };
 
-      const workingConversation: ChatMessage[] = [systemPrompt, ...body.messages];
+        const workingConversation: ChatMessage[] = [
+          systemPrompt,
+          ...body.messages,
+        ];
 
-      const maxIterations = 3;
+        const maxIterations = 3;
 
-      for (let iteration = 0; iteration < maxIterations; iteration += 1) {
-        const modelStep = mockModelRespond(workingConversation);
+        for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+          const modelStep = mockModelRespond(workingConversation);
 
-        if (modelStep.kind === "tool_call") {
+          if (modelStep.kind === "tool_call") {
+            controller.enqueue(
+              encoder.encode(
+                toSseEvent("assistant_thought", {
+                  text: modelStep.assistantThought,
+                }),
+              ),
+            );
+
+            controller.enqueue(
+              encoder.encode(
+                toSseEvent("tool_call", {
+                  toolName: modelStep.toolName,
+                  input: modelStep.input,
+                }),
+              ),
+            );
+
+            const toolResult = await executeTool(
+              modelStep.toolName,
+              modelStep.input,
+            );
+
+            controller.enqueue(
+              encoder.encode(
+                toSseEvent("tool_result", {
+                  toolName: toolResult.toolName,
+                  status: toolResult.status,
+                  message: toolResult.message,
+                  error: toolResult.error,
+                  meta: toolResult.meta,
+                }),
+              ),
+            );
+
+            workingConversation.push({
+              role: "assistant",
+              content: `tool_call:${modelStep.toolName}`,
+            });
+            workingConversation.push(asToolMessage(toolResult));
+            continue;
+          }
+
+          const tokens = modelStep.response.split(" ");
+
+          for (const token of tokens) {
+            controller.enqueue(
+              encoder.encode(toSseEvent("token", { text: `${token} ` })),
+            );
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+
           controller.enqueue(
-            encoder.encode(
-              toSseEvent("assistant_thought", {
-                text: modelStep.assistantThought,
-              }),
-            ),
+            encoder.encode(toSseEvent("done", { status: "complete" })),
           );
-
-          controller.enqueue(
-            encoder.encode(
-              toSseEvent("tool_call", {
-                toolName: modelStep.toolName,
-                input: modelStep.input,
-              }),
-            ),
-          );
-
-          const toolResult = await executeTool(modelStep.toolName, modelStep.input);
-
-          controller.enqueue(
-            encoder.encode(
-              toSseEvent("tool_result", {
-                toolName: toolResult.toolName,
-                status: toolResult.status,
-                message: toolResult.message,
-                error: toolResult.error,
-                meta: toolResult.meta,
-              }),
-            ),
-          );
-
-          workingConversation.push({
-            role: "assistant",
-            content: `tool_call:${modelStep.toolName}`,
-          });
-          workingConversation.push(asToolMessage(toolResult));
-          continue;
-        }
-
-        const tokens = modelStep.response.split(" ");
-
-        for (const token of tokens) {
-          controller.enqueue(
-            encoder.encode(toSseEvent("token", { text: `${token} ` })),
-          );
-          await new Promise((resolve) => setTimeout(resolve, 20));
+          controller.close();
+          return;
         }
 
         controller.enqueue(
-          encoder.encode(toSseEvent("done", { status: "complete" })),
+          encoder.encode(
+            toSseEvent("done", {
+              status: "complete",
+              message: "max tool iterations reached",
+            }),
+          ),
         );
         controller.close();
-        return;
-      }
+      } catch (error) {
+        const details =
+          error instanceof Error ? error.message : "Unexpected server error";
 
-      controller.enqueue(
-        encoder.encode(
-          toSseEvent("done", {
-            status: "complete",
-            message: "max tool iterations reached",
-          }),
-        ),
-      );
-      controller.close();
+        controller.enqueue(
+          encoder.encode(
+            toSseEvent("error", {
+              code: "CHAT_STREAM_FAILED",
+              message:
+                "something went wrong while generating your response. please try again.",
+            }),
+          ),
+        );
+
+        controller.enqueue(
+          encoder.encode(
+            toSseEvent("done", {
+              status: "error",
+              message:
+                "unable to finish this request right now. please retry in a moment.",
+            }),
+          ),
+        );
+
+        console.error("[api/chat] stream failed", { details });
+        controller.close();
+      }
     },
   });
 
