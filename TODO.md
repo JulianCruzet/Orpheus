@@ -60,7 +60,7 @@ owner: julian + ali (+ faye support)
   - [ ] product cards
   - [ ] market research summaries
   - [ ] action confirmations
-- [ ] add quick prompt buttons for hero demo flow
+- [x] add quick prompt buttons for hero demo flow
 
 ## 6) persistence (mvp)
 - [ ] choose storage (sqlite + drizzle recommended for speed)
