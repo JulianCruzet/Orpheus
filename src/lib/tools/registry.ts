@@ -11,6 +11,7 @@ import {
   ToolExecutionResult,
   ToolRegistry,
 } from "@/lib/tools/types";
+import { researchMarket } from "@/lib/tools/research-market";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -121,9 +122,7 @@ export const toolRegistry: ToolRegistry = {
   research_market: {
     name: "research_market",
     description: "Research market trends and pricing opportunities.",
-    handler: withToolLogging("research_market", async () =>
-      notImplemented("research_market"),
-    ),
+    handler: withToolLogging("research_market", researchMarket),
   },
   research_competitors: {
     name: "research_competitors",

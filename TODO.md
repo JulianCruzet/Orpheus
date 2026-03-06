@@ -42,11 +42,11 @@ owner: julian + ali (+ faye support)
   - [x] tags
   - [x] seo metadata
   - [x] pricing suggestion
-- [ ] implement `research_market`
-  - [ ] niche summary
-  - [ ] competitor pricing range
-  - [ ] keyword/trend summary
-  - [ ] opportunity score / recommendation
+- [x] implement `research_market`
+  - [x] niche summary
+  - [x] competitor pricing range
+  - [x] keyword/trend summary
+  - [x] opportunity score / recommendation
 - [ ] implement `research_competitors`
   - [ ] competitor catalog snapshot
   - [ ] pricing patterns
