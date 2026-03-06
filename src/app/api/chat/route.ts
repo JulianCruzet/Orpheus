@@ -1,7 +1,9 @@
+import { executeTool } from "@/lib/tools/registry";
+import { StructuredToolResult } from "@/lib/tools/types";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
-const chatRoleSchema = z.enum(["system", "user", "assistant"]);
+const chatRoleSchema = z.enum(["system", "user", "assistant", "tool"]);
 
 const chatMessageSchema = z.object({
   role: chatRoleSchema,
@@ -12,10 +14,108 @@ const chatRequestBodySchema = z.object({
   messages: z.array(chatMessageSchema).min(1),
 });
 
+type ChatMessage = z.infer<typeof chatMessageSchema>;
 type ChatRequestBody = z.infer<typeof chatRequestBodySchema>;
+
+type MockModelToolCall = {
+  kind: "tool_call";
+  toolName: string;
+  input: Record<string, unknown>;
+  assistantThought: string;
+};
+
+type MockModelFinal = {
+  kind: "final";
+  response: string;
+};
+
+type MockModelStep = MockModelToolCall | MockModelFinal;
 
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function normalize(input: string): string {
+  return input.toLowerCase().trim();
+}
+
+function chooseToolFromUserPrompt(prompt: string): MockModelToolCall | null {
+  const text = normalize(prompt);
+
+  if (
+    text.includes("list products") ||
+    text.includes("show products") ||
+    text.includes("products")
+  ) {
+    return {
+      kind: "tool_call",
+      toolName: "shopify_list_products",
+      input: { limit: 10 },
+      assistantThought: "i'll check your product catalog first.",
+    };
+  }
+
+  if (text.includes("market") || text.includes("trend")) {
+    return {
+      kind: "tool_call",
+      toolName: "research_market",
+      input: { query: prompt },
+      assistantThought: "i'll run market research for that request.",
+    };
+  }
+
+  if (text.includes("competitor")) {
+    return {
+      kind: "tool_call",
+      toolName: "research_competitors",
+      input: { query: prompt },
+      assistantThought: "i'll analyze competitors first.",
+    };
+  }
+
+  return null;
+}
+
+function mockModelRespond(conversation: ChatMessage[]): MockModelStep {
+  const lastMessage = conversation[conversation.length - 1];
+
+  if (lastMessage?.role === "tool") {
+    return {
+      kind: "final",
+      response:
+        "i used the requested tool and captured the result. once real handlers are wired, this response will include live business output.",
+    };
+  }
+
+  const lastUserMessage = [...conversation]
+    .reverse()
+    .find((message) => message.role === "user");
+
+  if (!lastUserMessage) {
+    return {
+      kind: "final",
+      response: "share what you want to do and i'll help.",
+    };
+  }
+
+  const toolCall = chooseToolFromUserPrompt(lastUserMessage.content);
+
+  if (toolCall) {
+    return toolCall;
+  }
+
+  return {
+    kind: "final",
+    response:
+      "got it. i can help with products, market research, and competitors once you ask for one of those flows.",
+  };
+}
+
+function asToolMessage(result: StructuredToolResult<unknown>): ChatMessage {
+  return {
+    role: "tool",
+    content: JSON.stringify(result),
+  };
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -33,7 +133,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json(
       {
         error:
-          "Invalid request body. `messages` must be a non-empty array of { role: system|user|assistant, content: non-empty string }.",
+          "Invalid request body. `messages` must be a non-empty array of { role, content }.",
       },
       { status: 400 },
     );
@@ -41,33 +141,90 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const body: ChatRequestBody = parsed.data;
 
-  const lastUserMessage = [...body.messages]
-    .reverse()
-    .find((message) => message.role === "user");
-
-  const assistantReply = lastUserMessage
-    ? `got it. here's a streamed response for: "${lastUserMessage.content}"`
-    : "got it. how can i help?";
-
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const words = assistantReply.split(" ");
-
       controller.enqueue(
         encoder.encode(toSseEvent("start", { status: "streaming" })),
       );
 
-      for (const word of words) {
+      const systemPrompt: ChatMessage = {
+        role: "system",
+        content:
+          "you are shams-e, an ecommerce copilot. decide whether to call a tool or answer directly.",
+      };
+
+      const workingConversation: ChatMessage[] = [systemPrompt, ...body.messages];
+
+      const maxIterations = 3;
+
+      for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+        const modelStep = mockModelRespond(workingConversation);
+
+        if (modelStep.kind === "tool_call") {
+          controller.enqueue(
+            encoder.encode(
+              toSseEvent("assistant_thought", {
+                text: modelStep.assistantThought,
+              }),
+            ),
+          );
+
+          controller.enqueue(
+            encoder.encode(
+              toSseEvent("tool_call", {
+                toolName: modelStep.toolName,
+                input: modelStep.input,
+              }),
+            ),
+          );
+
+          const toolResult = await executeTool(modelStep.toolName, modelStep.input);
+
+          controller.enqueue(
+            encoder.encode(
+              toSseEvent("tool_result", {
+                toolName: toolResult.toolName,
+                status: toolResult.status,
+                message: toolResult.message,
+                error: toolResult.error,
+                meta: toolResult.meta,
+              }),
+            ),
+          );
+
+          workingConversation.push({
+            role: "assistant",
+            content: `tool_call:${modelStep.toolName}`,
+          });
+          workingConversation.push(asToolMessage(toolResult));
+          continue;
+        }
+
+        const tokens = modelStep.response.split(" ");
+
+        for (const token of tokens) {
+          controller.enqueue(
+            encoder.encode(toSseEvent("token", { text: `${token} ` })),
+          );
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+
         controller.enqueue(
-          encoder.encode(toSseEvent("token", { text: `${word} ` })),
+          encoder.encode(toSseEvent("done", { status: "complete" })),
         );
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        controller.close();
+        return;
       }
 
       controller.enqueue(
-        encoder.encode(toSseEvent("done", { status: "complete" })),
+        encoder.encode(
+          toSseEvent("done", {
+            status: "complete",
+            message: "max tool iterations reached",
+          }),
+        ),
       );
       controller.close();
     },

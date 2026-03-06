@@ -12,12 +12,12 @@ owner: julian + ali (+ faye support)
 ## 1) core agent backend (p0)
 - [x] create `/api/chat` endpoint (streaming response)
 - [x] add conversation input schema validation (zod or equivalent)
-- [ ] implement agent loop:
-  - [ ] send system prompt + conversation history to model
-  - [ ] parse tool calls
-  - [ ] execute tool handlers
-  - [ ] return tool results to model
-  - [ ] continue until final assistant response
+- [x] implement agent loop:
+  - [x] send system prompt + conversation history to model
+  - [x] parse tool calls
+  - [x] execute tool handlers
+  - [x] return tool results to model
+  - [x] continue until final assistant response
 - [ ] add graceful error handling and user-safe fallback responses
 
 ## 2) tool registry + types
