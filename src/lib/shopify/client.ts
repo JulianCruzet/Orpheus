@@ -52,15 +52,21 @@ export class ShopifyClient {
 }
 
 export function createShopifyClientFromEnv(): ShopifyClient {
-  const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
-  const adminAccessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+  const storeDomain =
+    process.env.SHOPIFY_STORE_DOMAIN ?? process.env.SHOPIFY_STORE_URL;
+  const adminAccessToken =
+    process.env.SHOPIFY_ADMIN_ACCESS_TOKEN ?? process.env.SHOPIFY_ACCESS_TOKEN;
 
   if (!storeDomain) {
-    throw new Error("Missing SHOPIFY_STORE_DOMAIN environment variable.");
+    throw new Error(
+      "Missing SHOPIFY_STORE_DOMAIN (or SHOPIFY_STORE_URL) environment variable.",
+    );
   }
 
   if (!adminAccessToken) {
-    throw new Error("Missing SHOPIFY_ADMIN_ACCESS_TOKEN environment variable.");
+    throw new Error(
+      "Missing SHOPIFY_ADMIN_ACCESS_TOKEN (or SHOPIFY_ACCESS_TOKEN) environment variable.",
+    );
   }
 
   return new ShopifyClient({
