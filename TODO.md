@@ -64,10 +64,10 @@ owner: julian + ali (+ faye support)
 
 ## 6) persistence (mvp)
 - [x] choose storage (sqlite + drizzle recommended for speed)
-- [ ] create tables:
-  - [ ] conversations
-  - [ ] messages
-  - [ ] action_log
+- [x] create tables:
+  - [x] conversations
+  - [x] messages
+  - [x] action_log
 - [ ] persist + reload conversation history
 - [ ] persist tool execution logs for audit/activity feed
 
