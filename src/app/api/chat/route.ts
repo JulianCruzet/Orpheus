@@ -39,8 +39,21 @@ type MockModelFinal = {
 
 type MockModelStep = MockModelToolCall | MockModelFinal;
 
+const DESTRUCTIVE_TOOLS = new Set([
+  "shopify_update_product",
+  "shopify_manage_inventory",
+]);
+
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function requiresConfirmation(toolName: string, input: Record<string, unknown>): boolean {
+  if (!DESTRUCTIVE_TOOLS.has(toolName)) {
+    return false;
+  }
+
+  return input.confirmed !== true;
 }
 
 function normalize(input: string): string {
@@ -259,6 +272,43 @@ export async function POST(request: NextRequest): Promise<Response> {
                 }),
               ),
             );
+
+            if (requiresConfirmation(modelStep.toolName, modelStep.input)) {
+              controller.enqueue(
+                encoder.encode(
+                  toSseEvent("confirmation_required", {
+                    toolName: modelStep.toolName,
+                    message:
+                      "this action can modify live store data. resend with input.confirmed=true to proceed.",
+                  }),
+                ),
+              );
+
+              workingConversation.push({
+                role: "assistant",
+                content: `confirmation_required:${modelStep.toolName}`,
+              });
+
+              const messagesToPersist = workingConversation
+                .map(toPersistedMessage)
+                .filter((message): message is PersistedChatMessage =>
+                  message !== null,
+                );
+
+              await saveConversationMessages(conversationId, messagesToPersist);
+
+              controller.enqueue(
+                encoder.encode(
+                  toSseEvent("done", {
+                    status: "requires_confirmation",
+                    conversationId,
+                    toolName: modelStep.toolName,
+                  }),
+                ),
+              );
+              controller.close();
+              return;
+            }
 
             const toolResult = await executeTool(
               modelStep.toolName,
