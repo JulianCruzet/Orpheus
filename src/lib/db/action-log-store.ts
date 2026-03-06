@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { redactSensitiveData } from "@/lib/security/redact";
 import { StructuredToolResult } from "@/lib/tools/types";
 
 export type PersistedActionLog = {
@@ -53,8 +54,8 @@ export async function appendToolExecutionLog(args: {
     conversationId: args.conversationId,
     toolName: args.toolName,
     status: args.result.status,
-    input: args.input,
-    output: args.result.data ?? null,
+    input: redactSensitiveData(args.input),
+    output: redactSensitiveData(args.result.data ?? null),
     errorCode: args.result.error?.code ?? null,
     errorDetails: args.result.error?.details ?? null,
     durationMs: args.result.meta?.durationMs ?? null,

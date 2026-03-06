@@ -5,6 +5,7 @@ import {
   saveConversationMessages,
 } from "@/lib/db/conversation-store";
 import { appendToolExecutionLog } from "@/lib/db/action-log-store";
+import { redactSensitiveData } from "@/lib/security/redact";
 import { executeTool } from "@/lib/tools/registry";
 import { StructuredToolResult } from "@/lib/tools/types";
 import { NextRequest } from "next/server";
@@ -309,7 +310,7 @@ export async function POST(request: NextRequest): Promise<Response> {
               encoder.encode(
                 toSseEvent("tool_call", {
                   toolName: modelStep.toolName,
-                  input: modelStep.input,
+                  input: redactSensitiveData(modelStep.input),
                 }),
               ),
             );
@@ -369,7 +370,8 @@ export async function POST(request: NextRequest): Promise<Response> {
                   toolName: toolResult.toolName,
                   status: toolResult.status,
                   message: toolResult.message,
-                  error: toolResult.error,
+                  data: redactSensitiveData(toolResult.data),
+                  error: redactSensitiveData(toolResult.error),
                   meta: toolResult.meta,
                 }),
               ),

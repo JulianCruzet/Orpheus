@@ -75,7 +75,7 @@ owner: julian + ali (+ faye support)
 - [x] add confirmation step for destructive actions (delete/bulk updates)
 - [x] add transparent action summaries before execution
 - [ ] add undo path for reversible changes where possible
-- [ ] redact secrets from logs and responses
+- [x] redact secrets from logs and responses
 
 ## 8) demo reliability (very important)
 - [ ] build `MOCK_MODE=true` path for offline/fallback demo
