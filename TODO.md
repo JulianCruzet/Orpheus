@@ -31,7 +31,7 @@ owner: julian + ali (+ faye support)
 - [x] implement `shopify_list_products`
 - [x] implement `shopify_create_product`
 - [x] implement `shopify_update_product`
-- [ ] implement `shopify_manage_inventory` (read + update)
+- [x] implement `shopify_manage_inventory` (read + update)
 - [x] implement `shopify_manage_orders` (list + detail)
 - [ ] add retries + friendly errors for rate limits and auth failures
 

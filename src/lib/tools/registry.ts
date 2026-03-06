@@ -3,6 +3,7 @@ import { shopifyCreateProduct } from "@/lib/tools/shopify-create-product";
 import { shopifyListProducts } from "@/lib/tools/shopify-list-products";
 import { shopifyUpdateProduct } from "@/lib/tools/shopify-update-product";
 import { shopifyManageOrders } from "@/lib/tools/shopify-manage-orders";
+import { shopifyManageInventory } from "@/lib/tools/shopify-manage-inventory";
 import {
   StructuredToolResult,
   ToolDefinition,
@@ -104,9 +105,7 @@ export const toolRegistry: ToolRegistry = {
   shopify_manage_inventory: {
     name: "shopify_manage_inventory",
     description: "Read or update Shopify inventory counts.",
-    handler: withToolLogging("shopify_manage_inventory", async () =>
-      notImplemented("shopify_manage_inventory"),
-    ),
+    handler: withToolLogging("shopify_manage_inventory", shopifyManageInventory),
   },
   shopify_manage_orders: {
     name: "shopify_manage_orders",
