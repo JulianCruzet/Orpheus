@@ -36,12 +36,12 @@ owner: julian + ali (+ faye support)
 - [x] add retries + friendly errors for rate limits and auth failures
 
 ## 4) ai tools (p0)
-- [ ] implement `generate_product_listing`
-  - [ ] title
-  - [ ] description
-  - [ ] tags
-  - [ ] seo metadata
-  - [ ] pricing suggestion
+- [x] implement `generate_product_listing`
+  - [x] title
+  - [x] description
+  - [x] tags
+  - [x] seo metadata
+  - [x] pricing suggestion
 - [ ] implement `research_market`
   - [ ] niche summary
   - [ ] competitor pricing range

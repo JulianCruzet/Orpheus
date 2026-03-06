@@ -1,4 +1,5 @@
 import { toStructuredToolResult } from "@/lib/tools/structured-result";
+import { generateProductListing } from "@/lib/tools/generate-product-listing";
 import { shopifyCreateProduct } from "@/lib/tools/shopify-create-product";
 import { shopifyListProducts } from "@/lib/tools/shopify-list-products";
 import { shopifyUpdateProduct } from "@/lib/tools/shopify-update-product";
@@ -115,9 +116,7 @@ export const toolRegistry: ToolRegistry = {
   generate_product_listing: {
     name: "generate_product_listing",
     description: "Generate product listing content with AI.",
-    handler: withToolLogging("generate_product_listing", async () =>
-      notImplemented("generate_product_listing"),
-    ),
+    handler: withToolLogging("generate_product_listing", generateProductListing),
   },
   research_market: {
     name: "research_market",
