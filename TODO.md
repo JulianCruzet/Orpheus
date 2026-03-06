@@ -10,7 +10,7 @@ owner: julian + ali (+ faye support)
 - [x] define branch/commit workflow for sprint week (feature branches + PR cadence)
 
 ## 1) core agent backend (p0)
-- [ ] create `/api/chat` endpoint (streaming response)
+- [x] create `/api/chat` endpoint (streaming response)
 - [ ] add conversation input schema validation (zod or equivalent)
 - [ ] implement agent loop:
   - [ ] send system prompt + conversation history to model
