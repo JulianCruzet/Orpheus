@@ -1,6 +1,7 @@
 import { toStructuredToolResult } from "@/lib/tools/structured-result";
 import { shopifyCreateProduct } from "@/lib/tools/shopify-create-product";
 import { shopifyListProducts } from "@/lib/tools/shopify-list-products";
+import { shopifyUpdateProduct } from "@/lib/tools/shopify-update-product";
 import {
   StructuredToolResult,
   ToolDefinition,
@@ -97,9 +98,7 @@ export const toolRegistry: ToolRegistry = {
   shopify_update_product: {
     name: "shopify_update_product",
     description: "Update an existing Shopify product.",
-    handler: withToolLogging("shopify_update_product", async () =>
-      notImplemented("shopify_update_product"),
-    ),
+    handler: withToolLogging("shopify_update_product", shopifyUpdateProduct),
   },
   shopify_manage_inventory: {
     name: "shopify_manage_inventory",

@@ -30,7 +30,7 @@ owner: julian + ali (+ faye support)
 - [x] create `src/lib/shopify/client.ts` with authenticated admin client
 - [x] implement `shopify_list_products`
 - [x] implement `shopify_create_product`
-- [ ] implement `shopify_update_product`
+- [x] implement `shopify_update_product`
 - [ ] implement `shopify_manage_inventory` (read + update)
 - [ ] implement `shopify_manage_orders` (list + detail)
 - [ ] add retries + friendly errors for rate limits and auth failures
