@@ -23,7 +23,7 @@ owner: julian + ali (+ faye support)
 ## 2) tool registry + types
 - [x] create shared tool type definitions (`src/lib/tools/types.ts`)
 - [x] implement tool registry with metadata + handler mapping
-- [ ] add logging for each tool call (start/end/status/duration)
+- [x] add logging for each tool call (start/end/status/duration)
 - [ ] return structured tool results for consistent UI rendering
 
 ## 3) shopify integration (p0)

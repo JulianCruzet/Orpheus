@@ -4,6 +4,8 @@ import {
   ToolRegistry,
 } from "@/lib/tools/types";
 
+const nowIso = (): string => new Date().toISOString();
+
 const notImplemented = async (
   toolName: string,
 ): Promise<ToolExecutionResult<null>> => {
@@ -17,46 +19,122 @@ const notImplemented = async (
   };
 };
 
+function withToolLogging<TInput = unknown, TOutput = unknown>(
+  toolName: string,
+  handler: (input: TInput) => Promise<ToolExecutionResult<TOutput>>,
+): (input: TInput) => Promise<ToolExecutionResult<TOutput>> {
+  return async (input: TInput): Promise<ToolExecutionResult<TOutput>> => {
+    const startedAt = nowIso();
+    const startedTime = Date.now();
+
+    console.info(`[tool:${toolName}] start`, { startedAt });
+
+    try {
+      const result = await handler(input);
+      const finishedAt = nowIso();
+      const durationMs = Date.now() - startedTime;
+
+      console.info(`[tool:${toolName}] end`, {
+        status: result.status,
+        durationMs,
+        startedAt,
+        finishedAt,
+      });
+
+      return {
+        ...result,
+        meta: {
+          ...(result.meta ?? {}),
+          startedAt,
+          finishedAt,
+          durationMs,
+        },
+      };
+    } catch (error) {
+      const finishedAt = nowIso();
+      const durationMs = Date.now() - startedTime;
+      const details = error instanceof Error ? error.message : "Unknown error";
+
+      console.error(`[tool:${toolName}] failed`, {
+        durationMs,
+        startedAt,
+        finishedAt,
+        details,
+      });
+
+      return {
+        status: "error",
+        message: `${toolName} failed unexpectedly.`,
+        error: {
+          code: "TOOL_EXECUTION_FAILED",
+          details,
+        },
+        meta: {
+          startedAt,
+          finishedAt,
+          durationMs,
+        },
+      };
+    }
+  };
+}
+
 export const toolRegistry: ToolRegistry = {
   shopify_list_products: {
     name: "shopify_list_products",
     description: "List products from the connected Shopify store.",
-    handler: async () => notImplemented("shopify_list_products"),
+    handler: withToolLogging("shopify_list_products", async () =>
+      notImplemented("shopify_list_products"),
+    ),
   },
   shopify_create_product: {
     name: "shopify_create_product",
     description: "Create a new Shopify product.",
-    handler: async () => notImplemented("shopify_create_product"),
+    handler: withToolLogging("shopify_create_product", async () =>
+      notImplemented("shopify_create_product"),
+    ),
   },
   shopify_update_product: {
     name: "shopify_update_product",
     description: "Update an existing Shopify product.",
-    handler: async () => notImplemented("shopify_update_product"),
+    handler: withToolLogging("shopify_update_product", async () =>
+      notImplemented("shopify_update_product"),
+    ),
   },
   shopify_manage_inventory: {
     name: "shopify_manage_inventory",
     description: "Read or update Shopify inventory counts.",
-    handler: async () => notImplemented("shopify_manage_inventory"),
+    handler: withToolLogging("shopify_manage_inventory", async () =>
+      notImplemented("shopify_manage_inventory"),
+    ),
   },
   shopify_manage_orders: {
     name: "shopify_manage_orders",
     description: "List or fetch Shopify order details.",
-    handler: async () => notImplemented("shopify_manage_orders"),
+    handler: withToolLogging("shopify_manage_orders", async () =>
+      notImplemented("shopify_manage_orders"),
+    ),
   },
   generate_product_listing: {
     name: "generate_product_listing",
     description: "Generate product listing content with AI.",
-    handler: async () => notImplemented("generate_product_listing"),
+    handler: withToolLogging("generate_product_listing", async () =>
+      notImplemented("generate_product_listing"),
+    ),
   },
   research_market: {
     name: "research_market",
     description: "Research market trends and pricing opportunities.",
-    handler: async () => notImplemented("research_market"),
+    handler: withToolLogging("research_market", async () =>
+      notImplemented("research_market"),
+    ),
   },
   research_competitors: {
     name: "research_competitors",
     description: "Analyze competitor products and positioning.",
-    handler: async () => notImplemented("research_competitors"),
+    handler: withToolLogging("research_competitors", async () =>
+      notImplemented("research_competitors"),
+    ),
   },
 };
 
