@@ -68,7 +68,7 @@ owner: julian + ali (+ faye support)
   - [x] conversations
   - [x] messages
   - [x] action_log
-- [ ] persist + reload conversation history
+- [x] persist + reload conversation history
 - [ ] persist tool execution logs for audit/activity feed
 
 ## 7) safety + trust controls

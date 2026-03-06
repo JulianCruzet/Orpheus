@@ -1,3 +1,9 @@
+import {
+  createConversationId,
+  loadConversationMessages,
+  PersistedChatMessage,
+  saveConversationMessages,
+} from "@/lib/db/conversation-store";
 import { executeTool } from "@/lib/tools/registry";
 import { StructuredToolResult } from "@/lib/tools/types";
 import { NextRequest } from "next/server";
@@ -11,6 +17,7 @@ const chatMessageSchema = z.object({
 });
 
 const chatRequestBodySchema = z.object({
+  conversationId: z.string().trim().min(1).optional(),
   messages: z.array(chatMessageSchema).min(1),
 });
 
@@ -118,6 +125,64 @@ function asToolMessage(result: StructuredToolResult<unknown>): ChatMessage {
   };
 }
 
+function toPersistedMessage(message: ChatMessage): PersistedChatMessage | null {
+  if (message.role === "system") {
+    return null;
+  }
+
+  return {
+    role: message.role,
+    content: message.content,
+  };
+}
+
+function mergeMessages(
+  existing: PersistedChatMessage[],
+  incoming: ChatMessage[],
+): ChatMessage[] {
+  const fromStore: ChatMessage[] = existing.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
+
+  if (fromStore.length === 0) {
+    return incoming;
+  }
+
+  if (incoming.length > fromStore.length) {
+    const isPrefixMatch = fromStore.every((stored, index) => {
+      const current = incoming[index];
+      return (
+        current &&
+        current.role === stored.role &&
+        current.content === stored.content
+      );
+    });
+
+    if (isPrefixMatch) {
+      return incoming;
+    }
+  }
+
+  const lastIncoming = incoming[incoming.length - 1];
+
+  if (!lastIncoming) {
+    return fromStore;
+  }
+
+  const lastStored = fromStore[fromStore.length - 1];
+
+  if (
+    lastStored &&
+    lastStored.role === lastIncoming.role &&
+    lastStored.content === lastIncoming.content
+  ) {
+    return fromStore;
+  }
+
+  return [...fromStore, lastIncoming];
+}
+
 export async function POST(request: NextRequest): Promise<Response> {
   let rawBody: unknown;
 
@@ -140,6 +205,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const body: ChatRequestBody = parsed.data;
+  const conversationId = body.conversationId ?? createConversationId();
+  const existingMessages = await loadConversationMessages(conversationId);
 
   const encoder = new TextEncoder();
 
@@ -147,7 +214,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     async start(controller) {
       try {
         controller.enqueue(
-          encoder.encode(toSseEvent("start", { status: "streaming" })),
+          encoder.encode(
+            toSseEvent("start", {
+              status: "streaming",
+              conversationId,
+              restoredMessages: existingMessages.length,
+            }),
+          ),
         );
 
         const systemPrompt: ChatMessage = {
@@ -156,9 +229,11 @@ export async function POST(request: NextRequest): Promise<Response> {
             "you are shams-e, an ecommerce copilot. decide whether to call a tool or answer directly.",
         };
 
+        const restoredConversation = mergeMessages(existingMessages, body.messages);
+
         const workingConversation: ChatMessage[] = [
           systemPrompt,
-          ...body.messages,
+          ...restoredConversation,
         ];
 
         const maxIterations = 3;
@@ -218,18 +293,43 @@ export async function POST(request: NextRequest): Promise<Response> {
             await new Promise((resolve) => setTimeout(resolve, 20));
           }
 
+          workingConversation.push({
+            role: "assistant",
+            content: modelStep.response,
+          });
+
+          const messagesToPersist = workingConversation
+            .map(toPersistedMessage)
+            .filter((message): message is PersistedChatMessage =>
+              message !== null,
+            );
+
+          await saveConversationMessages(conversationId, messagesToPersist);
+
           controller.enqueue(
-            encoder.encode(toSseEvent("done", { status: "complete" })),
+            encoder.encode(
+              toSseEvent("done", {
+                status: "complete",
+                conversationId,
+              }),
+            ),
           );
           controller.close();
           return;
         }
+
+        const messagesToPersist = workingConversation
+          .map(toPersistedMessage)
+          .filter((message): message is PersistedChatMessage => message !== null);
+
+        await saveConversationMessages(conversationId, messagesToPersist);
 
         controller.enqueue(
           encoder.encode(
             toSseEvent("done", {
               status: "complete",
               message: "max tool iterations reached",
+              conversationId,
             }),
           ),
         );
@@ -254,11 +354,12 @@ export async function POST(request: NextRequest): Promise<Response> {
               status: "error",
               message:
                 "unable to finish this request right now. please retry in a moment.",
+              conversationId,
             }),
           ),
         );
 
-        console.error("[api/chat] stream failed", { details });
+        console.error("[api/chat] stream failed", { details, conversationId });
         controller.close();
       }
     },
