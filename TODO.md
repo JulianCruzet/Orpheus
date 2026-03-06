@@ -63,7 +63,7 @@ owner: julian + ali (+ faye support)
 - [x] add quick prompt buttons for hero demo flow
 
 ## 6) persistence (mvp)
-- [ ] choose storage (sqlite + drizzle recommended for speed)
+- [x] choose storage (sqlite + drizzle recommended for speed)
 - [ ] create tables:
   - [ ] conversations
   - [ ] messages
