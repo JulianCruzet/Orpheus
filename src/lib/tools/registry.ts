@@ -4,94 +4,68 @@ import {
   ToolRegistry,
 } from "@/lib/tools/types";
 
-type ToolHandler<TInput = unknown, TOutput = unknown> = (
-  input: TInput,
-) => Promise<ToolExecutionResult<TOutput>>;
-
-async function runMockHandler<TInput>(
+const notImplemented = async (
   toolName: string,
-  input: TInput,
-): Promise<ToolExecutionResult<{ tool: string; input: TInput }>> {
+): Promise<ToolExecutionResult<null>> => {
   return {
-    status: "success",
-    message: `${toolName} executed in mock mode`,
-    data: {
-      tool: toolName,
-      input,
+    status: "error",
+    message: `${toolName} is not implemented yet.`,
+    error: {
+      code: "NOT_IMPLEMENTED",
+      details: "Tool handler scaffold exists but business logic is pending.",
     },
   };
-}
-
-const handlers: Record<string, ToolHandler> = {
-  generate_product_listing: async (input) =>
-    runMockHandler("generate_product_listing", input),
-  research_market: async (input) => runMockHandler("research_market", input),
-  research_competitors: async (input) =>
-    runMockHandler("research_competitors", input),
-  shopify_list_products: async (input) =>
-    runMockHandler("shopify_list_products", input),
-  shopify_create_product: async (input) =>
-    runMockHandler("shopify_create_product", input),
-  shopify_update_product: async (input) =>
-    runMockHandler("shopify_update_product", input),
-  shopify_manage_inventory: async (input) =>
-    runMockHandler("shopify_manage_inventory", input),
-  shopify_manage_orders: async (input) =>
-    runMockHandler("shopify_manage_orders", input),
 };
-
-function createToolDefinition(
-  name: string,
-  description: string,
-): ToolDefinition<unknown, unknown> {
-  const handler = handlers[name];
-
-  if (!handler) {
-    throw new Error(`No handler registered for tool: ${name}`);
-  }
-
-  return {
-    name,
-    description,
-    handler,
-  };
-}
 
 export const toolRegistry: ToolRegistry = {
-  generate_product_listing: createToolDefinition(
-    "generate_product_listing",
-    "Generate a product listing draft with title, description, and tags.",
-  ),
-  research_market: createToolDefinition(
-    "research_market",
-    "Research market demand, pricing range, and trend opportunities.",
-  ),
-  research_competitors: createToolDefinition(
-    "research_competitors",
-    "Analyze competitors and positioning for a target product niche.",
-  ),
-  shopify_list_products: createToolDefinition(
-    "shopify_list_products",
-    "List products from the connected Shopify store.",
-  ),
-  shopify_create_product: createToolDefinition(
-    "shopify_create_product",
-    "Create a new Shopify product.",
-  ),
-  shopify_update_product: createToolDefinition(
-    "shopify_update_product",
-    "Update an existing Shopify product.",
-  ),
-  shopify_manage_inventory: createToolDefinition(
-    "shopify_manage_inventory",
-    "Read or update inventory levels for Shopify products.",
-  ),
-  shopify_manage_orders: createToolDefinition(
-    "shopify_manage_orders",
-    "List orders and retrieve order details from Shopify.",
-  ),
+  shopify_list_products: {
+    name: "shopify_list_products",
+    description: "List products from the connected Shopify store.",
+    handler: async () => notImplemented("shopify_list_products"),
+  },
+  shopify_create_product: {
+    name: "shopify_create_product",
+    description: "Create a new Shopify product.",
+    handler: async () => notImplemented("shopify_create_product"),
+  },
+  shopify_update_product: {
+    name: "shopify_update_product",
+    description: "Update an existing Shopify product.",
+    handler: async () => notImplemented("shopify_update_product"),
+  },
+  shopify_manage_inventory: {
+    name: "shopify_manage_inventory",
+    description: "Read or update Shopify inventory counts.",
+    handler: async () => notImplemented("shopify_manage_inventory"),
+  },
+  shopify_manage_orders: {
+    name: "shopify_manage_orders",
+    description: "List or fetch Shopify order details.",
+    handler: async () => notImplemented("shopify_manage_orders"),
+  },
+  generate_product_listing: {
+    name: "generate_product_listing",
+    description: "Generate product listing content with AI.",
+    handler: async () => notImplemented("generate_product_listing"),
+  },
+  research_market: {
+    name: "research_market",
+    description: "Research market trends and pricing opportunities.",
+    handler: async () => notImplemented("research_market"),
+  },
+  research_competitors: {
+    name: "research_competitors",
+    description: "Analyze competitor products and positioning.",
+    handler: async () => notImplemented("research_competitors"),
+  },
 };
 
-export function getTool(name: string): ToolDefinition<unknown, unknown> | null {
-  return toolRegistry[name] ?? null;
+export function getToolDefinition(
+  toolName: string,
+): ToolDefinition<unknown, unknown> | null {
+  return toolRegistry[toolName] ?? null;
+}
+
+export function listToolDefinitions(): ToolDefinition<unknown, unknown>[] {
+  return Object.values(toolRegistry);
 }
