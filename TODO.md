@@ -53,7 +53,7 @@ owner: julian + ali (+ faye support)
   - [ ] positioning analysis
 
 ## 5) chat product ui (separate from marketing landing)
-- [ ] create `/app/chat` route for product demo
+- [x] create `/app/chat` route for product demo
 - [ ] build chat layout (message list, composer, side panel)
 - [ ] render assistant/tool events (pending/success/error states)
 - [ ] render rich blocks:
