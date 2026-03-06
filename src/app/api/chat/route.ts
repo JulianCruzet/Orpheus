@@ -4,6 +4,7 @@ import {
   PersistedChatMessage,
   saveConversationMessages,
 } from "@/lib/db/conversation-store";
+import { appendToolExecutionLog } from "@/lib/db/action-log-store";
 import { executeTool } from "@/lib/tools/registry";
 import { StructuredToolResult } from "@/lib/tools/types";
 import { NextRequest } from "next/server";
@@ -263,6 +264,13 @@ export async function POST(request: NextRequest): Promise<Response> {
               modelStep.toolName,
               modelStep.input,
             );
+
+            await appendToolExecutionLog({
+              conversationId,
+              toolName: modelStep.toolName,
+              input: modelStep.input,
+              result: toolResult,
+            });
 
             controller.enqueue(
               encoder.encode(
