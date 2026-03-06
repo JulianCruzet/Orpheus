@@ -4,10 +4,10 @@ last updated: 2026-03-06
 owner: julian + ali (+ faye support)
 
 ## 0) project setup + docs
-- [ ] replace default `README.md` with project-specific setup, architecture, and demo instructions
+- [x] replace default `README.md` with project-specific setup, architecture, and demo instructions
 - [x] add `.env.example` with all required keys and brief descriptions
-- [ ] document local run steps for frontend + api + mock mode
-- [ ] define branch/commit workflow for sprint week (feature branches + PR cadence)
+- [x] document local run steps for frontend + api + mock mode
+- [x] define branch/commit workflow for sprint week (feature branches + PR cadence)
 
 ## 1) core agent backend (p0)
 - [ ] create `/api/chat` endpoint (streaming response)
