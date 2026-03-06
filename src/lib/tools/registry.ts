@@ -1,4 +1,6 @@
+import { toStructuredToolResult } from "@/lib/tools/structured-result";
 import {
+  StructuredToolResult,
   ToolDefinition,
   ToolExecutionResult,
   ToolRegistry,
@@ -146,4 +148,24 @@ export function getToolDefinition(
 
 export function listToolDefinitions(): ToolDefinition<unknown, unknown>[] {
   return Object.values(toolRegistry);
+}
+
+export async function executeTool(
+  toolName: string,
+  input: unknown,
+): Promise<StructuredToolResult<unknown>> {
+  const toolDefinition = getToolDefinition(toolName);
+
+  if (!toolDefinition) {
+    return toStructuredToolResult(toolName, {
+      status: "error",
+      message: `${toolName} is not registered.`,
+      error: {
+        code: "TOOL_NOT_FOUND",
+      },
+    });
+  }
+
+  const executionResult = await toolDefinition.handler(input);
+  return toStructuredToolResult(toolName, executionResult);
 }

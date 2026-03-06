@@ -23,3 +23,20 @@ export interface ToolExecutionResult<TOutput = unknown> {
 }
 
 export type ToolRegistry = Record<string, ToolDefinition<unknown, unknown>>;
+
+export interface StructuredToolResult<TOutput = unknown> {
+  type: "tool_result";
+  toolName: string;
+  status: ToolResultStatus;
+  message?: string;
+  data?: TOutput;
+  error?: {
+    code: string;
+    details?: string;
+  };
+  meta?: {
+    durationMs?: number;
+    startedAt?: string;
+    finishedAt?: string;
+  };
+}

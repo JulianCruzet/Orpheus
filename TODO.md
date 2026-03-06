@@ -24,7 +24,7 @@ owner: julian + ali (+ faye support)
 - [x] create shared tool type definitions (`src/lib/tools/types.ts`)
 - [x] implement tool registry with metadata + handler mapping
 - [x] add logging for each tool call (start/end/status/duration)
-- [ ] return structured tool results for consistent UI rendering
+- [x] return structured tool results for consistent UI rendering
 
 ## 3) shopify integration (p0)
 - [ ] create `src/lib/shopify/client.ts` with authenticated admin client
