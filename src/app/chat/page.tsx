@@ -2,10 +2,20 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
+type ToolEventStatus = "pending" | "success" | "error";
+
 type ChatBubble = {
   id: string;
   role: "assistant" | "user";
   content: string;
+};
+
+type ToolEvent = {
+  id: string;
+  toolName: string;
+  status: ToolEventStatus;
+  summary: string;
+  timestamp: string;
 };
 
 const quickPrompts = [
@@ -14,6 +24,25 @@ const quickPrompts = [
   "analyze competitor pricing for bluetooth speakers",
   "draft a product listing for a minimalist desk lamp",
 ];
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getToolEventStyle(status: ToolEventStatus): string {
+  if (status === "pending") {
+    return "border-amber-300/40 bg-amber-400/10 text-amber-100";
+  }
+
+  if (status === "error") {
+    return "border-rose-300/40 bg-rose-400/10 text-rose-100";
+  }
+
+  return "border-emerald-300/40 bg-emerald-400/10 text-emerald-100";
+}
 
 export default function ChatDemoPage() {
   const [draft, setDraft] = useState("");
@@ -25,12 +54,13 @@ export default function ChatDemoPage() {
         "hey! ask me to list products, draft a product listing, or review your inventory.",
     },
   ]);
+  const [events, setEvents] = useState<ToolEvent[]>([]);
 
   const canSend = draft.trim().length > 0;
 
   const helperText = useMemo(() => {
     if (canSend) {
-      return "ready to send. this will wire into live agent flow next.";
+      return "ready to send. this now previews pending/success/error tool activity.";
     }
 
     return "pick a quick prompt or type a message to start the demo.";
@@ -48,20 +78,49 @@ export default function ChatDemoPage() {
       return;
     }
 
+    const now = new Date();
+    const baseId = Date.now();
+
     const userMessage: ChatBubble = {
-      id: `user-${Date.now()}`,
+      id: `user-${baseId}`,
       role: "user",
       content: text,
     };
 
+    const pendingEvent: ToolEvent = {
+      id: `tool-pending-${baseId}`,
+      toolName: "agent_router",
+      status: "pending",
+      summary: "routing request to tool chain...",
+      timestamp: formatTime(now),
+    };
+
+    const statusFromPrompt: ToolEventStatus = text.includes("error")
+      ? "error"
+      : "success";
+
+    const resultEvent: ToolEvent = {
+      id: `tool-result-${baseId}`,
+      toolName: "agent_router",
+      status: statusFromPrompt,
+      summary:
+        statusFromPrompt === "error"
+          ? "tool run failed. showing fallback response."
+          : "tool run finished. structured response ready.",
+      timestamp: formatTime(new Date(now.getTime() + 1500)),
+    };
+
     const assistantMessage: ChatBubble = {
-      id: `assistant-${Date.now()}`,
+      id: `assistant-${baseId}`,
       role: "assistant",
       content:
-        "demo ack: message captured. next step is rendering streamed tool events from /api/chat.",
+        statusFromPrompt === "error"
+          ? "i hit a tool error in this demo run. try another prompt and i'll retry."
+          : "done! tool activity is now rendering with live status states in the panel.",
     };
 
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setEvents((prev) => [resultEvent, pendingEvent, ...prev].slice(0, 8));
     setDraft("");
   }
 
@@ -135,14 +194,32 @@ export default function ChatDemoPage() {
             activity panel
           </h2>
           <p className="mt-2 text-sm text-white/70">
-            tool events, execution status, and action confirmations will render
-            here.
+            assistant/tool execution states now render below.
           </p>
-          <ul className="mt-4 space-y-2 text-sm text-white/60">
-            <li>- pending tool runs</li>
-            <li>- success/error outputs</li>
-            <li>- structured result cards</li>
-          </ul>
+
+          <div className="mt-4 space-y-2">
+            {events.length === 0 ? (
+              <p className="text-sm text-white/50">
+                no tool events yet. send a prompt to see pending/success/error.
+              </p>
+            ) : (
+              events.map((item) => (
+                <div
+                  key={item.id}
+                  className={`rounded-xl border px-3 py-2 text-sm ${getToolEventStyle(
+                    item.status,
+                  )}`}
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-[0.12em]">
+                    <span>{item.toolName}</span>
+                    <span>{item.status}</span>
+                  </div>
+                  <p className="mt-1 text-sm">{item.summary}</p>
+                  <p className="mt-1 text-xs opacity-75">{item.timestamp}</p>
+                </div>
+              ))
+            )}
+          </div>
         </aside>
       </div>
     </main>
