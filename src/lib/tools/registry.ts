@@ -8,25 +8,12 @@ import { shopifyManageInventory } from "@/lib/tools/shopify-manage-inventory";
 import {
   StructuredToolResult,
   ToolDefinition,
-  ToolExecutionResult,
   ToolRegistry,
 } from "@/lib/tools/types";
 import { researchMarket } from "@/lib/tools/research-market";
+import { researchCompetitors } from "@/lib/tools/research-competitors";
 
 const nowIso = (): string => new Date().toISOString();
-
-const notImplemented = async (
-  toolName: string,
-): Promise<ToolExecutionResult<null>> => {
-  return {
-    status: "error",
-    message: `${toolName} is not implemented yet.`,
-    error: {
-      code: "NOT_IMPLEMENTED",
-      details: "Tool handler scaffold exists but business logic is pending.",
-    },
-  };
-};
 
 function withToolLogging<TInput = unknown, TOutput = unknown>(
   toolName: string,
@@ -127,9 +114,7 @@ export const toolRegistry: ToolRegistry = {
   research_competitors: {
     name: "research_competitors",
     description: "Analyze competitor products and positioning.",
-    handler: withToolLogging("research_competitors", async () =>
-      notImplemented("research_competitors"),
-    ),
+    handler: withToolLogging("research_competitors", researchCompetitors),
   },
 };
 

@@ -47,10 +47,10 @@ owner: julian + ali (+ faye support)
   - [x] competitor pricing range
   - [x] keyword/trend summary
   - [x] opportunity score / recommendation
-- [ ] implement `research_competitors`
-  - [ ] competitor catalog snapshot
-  - [ ] pricing patterns
-  - [ ] positioning analysis
+- [x] implement `research_competitors`
+  - [x] competitor catalog snapshot
+  - [x] pricing patterns
+  - [x] positioning analysis
 
 ## 5) chat product ui (separate from marketing landing)
 - [x] create `/app/chat` route for product demo
