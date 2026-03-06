@@ -54,7 +54,7 @@ owner: julian + ali (+ faye support)
 
 ## 5) chat product ui (separate from marketing landing)
 - [x] create `/app/chat` route for product demo
-- [ ] build chat layout (message list, composer, side panel)
+- [x] build chat layout (message list, composer, side panel)
 - [ ] render assistant/tool events (pending/success/error states)
 - [ ] render rich blocks:
   - [ ] product cards
