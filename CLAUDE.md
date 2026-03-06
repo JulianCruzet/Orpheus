@@ -1,6 +1,5 @@
 # CLAUDE.md — Shams-E
 
-
 ## Project Overview
 
 Shams-E is an AI-powered e-commerce agent ("Cursor for Shopify") — a hackathon build due **March 10, 2026**. The full PRD lives at `PRD/Shams-E_PRD.md`.
