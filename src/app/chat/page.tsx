@@ -18,11 +18,25 @@ type ToolEvent = {
   timestamp: string;
 };
 
+type RichBlockType =
+  | "product_card"
+  | "market_research_summary"
+  | "action_confirmation";
+
+type RichBlock = {
+  id: string;
+  type: RichBlockType;
+  title: string;
+  body: string;
+  meta?: string;
+};
+
 const quickPrompts = [
   "list products with low inventory",
   "research market trends for reusable water bottles",
   "analyze competitor pricing for bluetooth speakers",
   "draft a product listing for a minimalist desk lamp",
+  "confirm inventory update for sku-wb-102",
 ];
 
 function formatTime(date: Date): string {
@@ -44,6 +58,60 @@ function getToolEventStyle(status: ToolEventStatus): string {
   return "border-emerald-300/40 bg-emerald-400/10 text-emerald-100";
 }
 
+function getRichBlockStyle(type: RichBlockType): string {
+  if (type === "product_card") {
+    return "border-cyan-300/40 bg-cyan-400/10 text-cyan-100";
+  }
+
+  if (type === "market_research_summary") {
+    return "border-violet-300/40 bg-violet-400/10 text-violet-100";
+  }
+
+  return "border-emerald-300/40 bg-emerald-400/10 text-emerald-100";
+}
+
+function buildRichBlocks(text: string, baseId: number): RichBlock[] {
+  const lowerText = text.toLowerCase();
+
+  if (lowerText.includes("list") || lowerText.includes("product")) {
+    return [
+      {
+        id: `rich-product-${baseId}`,
+        type: "product_card",
+        title: "minimalist desk lamp",
+        body: "$39.99 • inventory: 12 • status: active",
+        meta: "shopify product preview",
+      },
+    ];
+  }
+
+  if (lowerText.includes("research") || lowerText.includes("competitor")) {
+    return [
+      {
+        id: `rich-market-${baseId}`,
+        type: "market_research_summary",
+        title: "market snapshot",
+        body: "avg competitor price: $34-$49 • trend: compact eco products rising",
+        meta: "opportunity score: 8.2/10",
+      },
+    ];
+  }
+
+  if (lowerText.includes("confirm") || lowerText.includes("update")) {
+    return [
+      {
+        id: `rich-confirm-${baseId}`,
+        type: "action_confirmation",
+        title: "action confirmed",
+        body: "inventory updated successfully for sku-wb-102.",
+        meta: "applied at checkout location toronto warehouse",
+      },
+    ];
+  }
+
+  return [];
+}
+
 export default function ChatDemoPage() {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatBubble[]>([
@@ -55,12 +123,13 @@ export default function ChatDemoPage() {
     },
   ]);
   const [events, setEvents] = useState<ToolEvent[]>([]);
+  const [richBlocks, setRichBlocks] = useState<RichBlock[]>([]);
 
   const canSend = draft.trim().length > 0;
 
   const helperText = useMemo(() => {
     if (canSend) {
-      return "ready to send. this now previews pending/success/error tool activity.";
+      return "ready to send. this now previews pending/success/error tool activity and rich result blocks.";
     }
 
     return "pick a quick prompt or type a message to start the demo.";
@@ -116,11 +185,15 @@ export default function ChatDemoPage() {
       content:
         statusFromPrompt === "error"
           ? "i hit a tool error in this demo run. try another prompt and i'll retry."
-          : "done! tool activity is now rendering with live status states in the panel.",
+          : "done! tool activity is now rendering with live status states and rich result blocks.",
     };
+
+    const nextRichBlocks =
+      statusFromPrompt === "error" ? [] : buildRichBlocks(text, baseId);
 
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setEvents((prev) => [resultEvent, pendingEvent, ...prev].slice(0, 8));
+    setRichBlocks((prev) => [...nextRichBlocks, ...prev].slice(0, 6));
     setDraft("");
   }
 
@@ -194,7 +267,7 @@ export default function ChatDemoPage() {
             activity panel
           </h2>
           <p className="mt-2 text-sm text-white/70">
-            assistant/tool execution states now render below.
+            assistant/tool execution states and rich blocks render below.
           </p>
 
           <div className="mt-4 space-y-2">
@@ -216,6 +289,35 @@ export default function ChatDemoPage() {
                   </div>
                   <p className="mt-1 text-sm">{item.summary}</p>
                   <p className="mt-1 text-xs opacity-75">{item.timestamp}</p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
+            <h3 className="text-xs uppercase tracking-[0.14em] text-white/60">
+              rich result blocks
+            </h3>
+            {richBlocks.length === 0 ? (
+              <p className="text-sm text-white/50">
+                no rich blocks yet. try prompts about products, research, or confirmation.
+              </p>
+            ) : (
+              richBlocks.map((block) => (
+                <div
+                  key={block.id}
+                  className={`rounded-xl border px-3 py-2 ${getRichBlockStyle(
+                    block.type,
+                  )}`}
+                >
+                  <p className="text-xs uppercase tracking-[0.12em] opacity-80">
+                    {block.type.replaceAll("_", " ")}
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{block.title}</p>
+                  <p className="mt-1 text-sm">{block.body}</p>
+                  {block.meta ? (
+                    <p className="mt-1 text-xs opacity-75">{block.meta}</p>
+                  ) : null}
                 </div>
               ))
             )}

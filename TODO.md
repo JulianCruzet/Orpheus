@@ -56,10 +56,10 @@ owner: julian + ali (+ faye support)
 - [x] create `/app/chat` route for product demo
 - [x] build chat layout (message list, composer, side panel)
 - [x] render assistant/tool events (pending/success/error states)
-- [ ] render rich blocks:
-  - [ ] product cards
-  - [ ] market research summaries
-  - [ ] action confirmations
+- [x] render rich blocks:
+  - [x] product cards
+  - [x] market research summaries
+  - [x] action confirmations
 - [x] add quick prompt buttons for hero demo flow
 
 ## 6) persistence (mvp)
