@@ -141,6 +141,36 @@ const mockHandlers: Record<string, MockToolHandler> = {
       source: "mock",
     });
   },
+
+  analyze_store_performance: async (input) => {
+    const payload = (input as Record<string, unknown>) ?? {};
+    const revenue =
+      typeof payload.revenueLast30d === "number" ? payload.revenueLast30d : 8420;
+    const orders =
+      typeof payload.ordersLast30d === "number" ? payload.ordersLast30d : 214;
+    const aov = orders > 0 ? Math.round((revenue / orders) * 100) / 100 : 0;
+
+    return success("mock mode: returned analytics insight snapshot.", {
+      snapshot: {
+        revenueLast30d: revenue,
+        ordersLast30d: orders,
+        averageOrderValue: aov,
+        conversionRate: 2.14,
+        refundRate: 3.2,
+        roas: 2.7,
+      },
+      insights: [
+        "conversion is healthy for a cold-traffic heavy funnel",
+        "aov can grow with bundle-first merchandising",
+      ],
+      recommendations: [
+        "launch a two-tier bundle test and compare 7-day AOV lift",
+        "reuse best creative hooks from top ROAS ad set in PDP media",
+      ],
+      healthScore: 81,
+      source: "mock",
+    });
+  },
 };
 
 export function isMockModeEnabled(): boolean {

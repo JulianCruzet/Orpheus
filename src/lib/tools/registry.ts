@@ -15,6 +15,7 @@ import { researchMarket } from "@/lib/tools/research-market";
 import { researchCompetitors } from "@/lib/tools/research-competitors";
 import { generateProductImage } from "@/lib/tools/generate-product-image";
 import { shopifyDiscountsAndCollections } from "@/lib/tools/shopify-discounts-collections";
+import { analyzeStorePerformance } from "@/lib/tools/analyze-store-performance";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -131,6 +132,14 @@ export const toolRegistry: ToolRegistry = {
     handler: withToolLogging(
       "shopify_discounts_collections",
       shopifyDiscountsAndCollections,
+    ),
+  },
+  analyze_store_performance: {
+    name: "analyze_store_performance",
+    description: "Analyze store performance and return health insights.",
+    handler: withToolLogging(
+      "analyze_store_performance",
+      analyzeStorePerformance,
     ),
   },
 };
