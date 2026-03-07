@@ -1,30 +1,11 @@
+import {
+  SEEDED_INVENTORY,
+  SEEDED_ORDERS,
+  SEEDED_PRODUCTS,
+} from "@/lib/demo/seed-store";
 import { ToolExecutionResult } from "@/lib/tools/types";
 
 type MockToolHandler = (input: unknown) => Promise<ToolExecutionResult<unknown>>;
-
-const MOCK_PRODUCTS = [
-  {
-    id: "mock-prod-1",
-    title: "ZenFlow Desk Lamp",
-    price: 49.99,
-    inventory: 18,
-    status: "active",
-  },
-  {
-    id: "mock-prod-2",
-    title: "Aether Travel Mug",
-    price: 27.0,
-    inventory: 42,
-    status: "active",
-  },
-  {
-    id: "mock-prod-3",
-    title: "PulseGrip Phone Stand",
-    price: 19.5,
-    inventory: 9,
-    status: "draft",
-  },
-];
 
 const success = <TData>(message: string, data: TData): ToolExecutionResult<TData> => ({
   status: "success",
@@ -35,7 +16,7 @@ const success = <TData>(message: string, data: TData): ToolExecutionResult<TData
 const mockHandlers: Record<string, MockToolHandler> = {
   shopify_list_products: async () =>
     success("mock mode: returned seeded product catalog.", {
-      products: MOCK_PRODUCTS,
+      products: SEEDED_PRODUCTS,
       source: "mock",
     }),
 
@@ -62,24 +43,25 @@ const mockHandlers: Record<string, MockToolHandler> = {
 
   shopify_manage_inventory: async (input) => {
     const payload = (input as Record<string, unknown>) ?? {};
+    const productId =
+      typeof payload.productId === "string" ? payload.productId : "mock-prod-1";
+
+    const seeded = SEEDED_INVENTORY.find((item) => item.productId === productId);
 
     return success("mock mode: inventory operation simulated.", {
-      productId: payload.productId ?? "mock-prod-1",
-      quantity: payload.quantity ?? 20,
+      productId,
+      quantity:
+        typeof payload.quantity === "number"
+          ? payload.quantity
+          : (seeded?.available ?? 20),
+      seededInventory: SEEDED_INVENTORY,
       source: "mock",
     });
   },
 
   shopify_manage_orders: async () =>
     success("mock mode: returned seeded orders.", {
-      orders: [
-        {
-          id: "mock-order-101",
-          total: 89.99,
-          financialStatus: "paid",
-          fulfillmentStatus: "unfulfilled",
-        },
-      ],
+      orders: SEEDED_ORDERS,
       source: "mock",
     }),
 
