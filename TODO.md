@@ -103,7 +103,7 @@ owner: julian + ali (+ faye support)
 - [ ] elevate typography scale/weights and spacing rhythm to match landing-page quality
 - [ ] improve chat information hierarchy (primary actions vs secondary metadata)
 - [ ] add tasteful Framer Motion micro-interactions (message enter, tool state transitions, hover/focus)
-- [ ] add polished loading/skeleton and async state choreography
+- [x] add polished loading/skeleton and async state choreography
 - [ ] tighten mobile/responsive layout behavior and touch targets
 - [ ] improve visual consistency of rich result blocks (product/research/confirmation)
 - [ ] run final UX heuristics pass (clarity, feedback, error recovery, perceived speed)

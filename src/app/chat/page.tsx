@@ -133,6 +133,7 @@ export default function ChatDemoPage() {
   ]);
   const [events, setEvents] = useState<ToolEvent[]>([]);
   const [richBlocks, setRichBlocks] = useState<RichBlock[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -167,12 +168,16 @@ export default function ChatDemoPage() {
   const canSend = draft.trim().length > 0;
 
   const helperText = useMemo(() => {
+    if (isProcessing) {
+      return "processing request... tool states and rich blocks are updating.";
+    }
+
     if (canSend) {
       return "ready to send. this now previews pending/success/error tool activity and rich result blocks.";
     }
 
     return "pick a quick prompt or type a message to start the demo.";
-  }, [canSend]);
+  }, [canSend, isProcessing]);
 
   function handleQuickPromptClick(prompt: string): void {
     setDraft(prompt);
@@ -183,11 +188,11 @@ export default function ChatDemoPage() {
     router.replace("/auth");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
     const text = draft.trim();
-    if (!text) {
+    if (!text || isProcessing) {
       return;
     }
 
@@ -235,10 +240,17 @@ export default function ChatDemoPage() {
     const nextRichBlocks =
       statusFromPrompt === "error" ? [] : buildRichBlocks(text, baseId);
 
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
-    setEvents((prev) => [resultEvent, pendingEvent, ...prev].slice(0, 8));
-    setRichBlocks((prev) => [...nextRichBlocks, ...prev].slice(0, 6));
+    setIsProcessing(true);
+    setMessages((prev) => [...prev, userMessage]);
+    setEvents((prev) => [pendingEvent, ...prev].slice(0, 8));
     setDraft("");
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    setMessages((prev) => [...prev, assistantMessage]);
+    setEvents((prev) => [resultEvent, ...prev].slice(0, 8));
+    setRichBlocks((prev) => [...nextRichBlocks, ...prev].slice(0, 6));
+    setIsProcessing(false);
   }
 
   if (authLoading) {
@@ -294,7 +306,8 @@ export default function ChatDemoPage() {
                 key={prompt}
                 type="button"
                 onClick={() => handleQuickPromptClick(prompt)}
-                className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-400/20"
+                disabled={isProcessing}
+                className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {prompt}
               </button>
@@ -316,6 +329,12 @@ export default function ChatDemoPage() {
                 {message.content}
               </div>
             ))}
+
+            {isProcessing ? (
+              <div className="max-w-[70%] animate-pulse rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100/80">
+                assistant is thinking...
+              </div>
+            ) : null}
           </div>
 
           <form
@@ -327,14 +346,15 @@ export default function ChatDemoPage() {
               placeholder="message the shams-e agent..."
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              className="h-11 flex-1 rounded-xl border border-white/15 bg-[#0b1220] px-4 text-sm outline-none placeholder:text-white/40 focus:border-cyan-300/60"
+              disabled={isProcessing}
+              className="h-11 flex-1 rounded-xl border border-white/15 bg-[#0b1220] px-4 text-sm outline-none placeholder:text-white/40 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-60"
             />
             <button
               type="submit"
               className="h-11 rounded-xl bg-cyan-400 px-4 text-sm font-medium text-[#041018] disabled:opacity-60"
-              disabled={!canSend}
+              disabled={!canSend || isProcessing}
             >
-              send
+              {isProcessing ? "sending..." : "send"}
             </button>
           </form>
         </section>
@@ -369,6 +389,12 @@ export default function ChatDemoPage() {
                 </div>
               ))
             )}
+
+            {isProcessing ? (
+              <div className="animate-pulse rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs uppercase tracking-[0.12em] text-amber-100">
+                syncing tool states...
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
