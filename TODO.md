@@ -100,7 +100,7 @@ owner: julian + ali (+ faye support)
 - [x] rehearse 3-5 minute pitch with strict timing
 
 ## 11) UI/UX excellence pass (must feel premium)
-- [ ] elevate typography scale/weights and spacing rhythm to match landing-page quality
+- [x] elevate typography scale/weights and spacing rhythm to match landing-page quality
 - [x] improve chat information hierarchy (primary actions vs secondary metadata)
 - [x] add tasteful Framer Motion micro-interactions (message enter, tool state transitions, hover/focus)
 - [x] add polished loading/skeleton and async state choreography

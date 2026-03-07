@@ -303,20 +303,20 @@ export default function ChatDemoPage() {
     <main className="min-h-screen bg-[#05070f] text-white">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8 lg:flex-row">
         <section className="flex min-h-[68vh] flex-1 flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:min-h-[70vh] sm:p-4">
-          <header className="mb-4 border-b border-white/10 pb-3">
+          <header className="mb-5 border-b border-white/10 pb-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">
+                <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-cyan-300/90">
                   shams-e demo
                 </p>
-                <h1 className="mt-1 text-2xl font-semibold">agent chat</h1>
-                <p className="mt-1 text-sm text-white/70">
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[30px]">agent chat</h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">
                   prototype surface for tool-driven commerce conversations.
                 </p>
               </div>
 
-              <div className="text-left sm:text-right">
-                <p className="text-xs text-white/55">{session.user.email}</p>
+              <div className="space-y-1 text-left sm:text-right">
+                <p className="text-[11px] text-white/55">{session.user.email}</p>
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -328,7 +328,7 @@ export default function ChatDemoPage() {
             </div>
           </header>
 
-          <div className="mb-3">
+          <div className="mb-4">
             <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
               quick actions
             </p>
@@ -350,10 +350,10 @@ export default function ChatDemoPage() {
             </div>
           </div>
 
-          <p className="mb-3 text-xs text-white/50">{helperText}</p>
+          <p className="mb-3 text-xs leading-5 text-white/55">{helperText}</p>
 
           <div className="flex-1 space-y-3 overflow-auto pr-1">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-white/40">conversation</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">conversation</p>
 
             {messages.map((message) => (
               <motion.div
@@ -370,7 +370,7 @@ export default function ChatDemoPage() {
                 <p className="mb-1 text-[10px] uppercase tracking-[0.12em] opacity-60">
                   {message.role === "assistant" ? "assistant" : "you"}
                 </p>
-                <p>{message.content}</p>
+                <p className="leading-6">{message.content}</p>
               </motion.div>
             ))}
 
@@ -405,10 +405,10 @@ export default function ChatDemoPage() {
         </section>
 
         <aside className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4 lg:w-96">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-300">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
             activity panel
           </h2>
-          <p className="mt-2 text-sm text-white/70">
+          <p className="mt-2 text-sm leading-6 text-white/70">
             assistant/tool execution states and rich blocks render below.
           </p>
 
