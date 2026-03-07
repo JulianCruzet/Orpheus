@@ -273,10 +273,10 @@ export default function ChatDemoPage() {
 
   return (
     <main className="min-h-screen bg-[#05070f] text-white">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-8 lg:flex-row">
-        <section className="flex min-h-[70vh] flex-1 flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8 lg:flex-row">
+        <section className="flex min-h-[68vh] flex-1 flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:min-h-[70vh] sm:p-4">
           <header className="mb-4 border-b border-white/10 pb-3">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">
                   shams-e demo
@@ -287,12 +287,12 @@ export default function ChatDemoPage() {
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <p className="text-xs text-white/55">{session.user.email}</p>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/80 transition hover:border-cyan-300/50 hover:text-cyan-100"
+                  className="mt-2 min-h-10 rounded-lg border border-white/20 px-3 py-2 text-xs text-white/80 transition hover:border-cyan-300/50 hover:text-cyan-100"
                 >
                   sign out
                 </button>
@@ -304,7 +304,7 @@ export default function ChatDemoPage() {
             <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
               quick actions
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
               {quickPrompts.map((prompt) => (
                 <motion.button
                   key={prompt}
@@ -314,7 +314,7 @@ export default function ChatDemoPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.15 }}
-                  className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55"
+                  className="min-h-10 shrink-0 snap-start rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55 sm:min-h-0 sm:py-1.5"
                 >
                   {prompt}
                 </motion.button>
@@ -333,7 +333,7 @@ export default function ChatDemoPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
+                className={`max-w-[92%] rounded-xl px-4 py-3 text-sm sm:max-w-[80%] ${
                   message.role === "assistant"
                     ? "border border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
                     : "ml-auto border border-white/20 bg-[#0b1220] text-white"
@@ -347,7 +347,7 @@ export default function ChatDemoPage() {
             ))}
 
             {isProcessing ? (
-              <div className="max-w-[70%] animate-pulse rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100/80">
+              <div className="max-w-[85%] animate-pulse rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100/80 sm:max-w-[70%]">
                 <p className="mb-1 text-[10px] uppercase tracking-[0.12em] opacity-60">assistant</p>
                 <p>assistant is thinking...</p>
               </div>
@@ -356,7 +356,7 @@ export default function ChatDemoPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="mt-4 flex items-center gap-2 border-t border-white/10 pt-3"
+            className="sticky bottom-0 mt-4 flex items-center gap-2 border-t border-white/10 bg-[#05070f]/85 pt-3 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:bg-transparent sm:pb-0"
           >
             <input
               type="text"
@@ -364,11 +364,11 @@ export default function ChatDemoPage() {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               disabled={isProcessing}
-              className="h-11 flex-1 rounded-xl border border-white/15 bg-[#0b1220] px-4 text-sm outline-none placeholder:text-white/40 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-12 flex-1 rounded-xl border border-white/15 bg-[#0b1220] px-4 text-sm outline-none placeholder:text-white/40 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-60 sm:h-11"
             />
             <button
               type="submit"
-              className="h-11 rounded-xl bg-cyan-400 px-4 text-sm font-medium text-[#041018] disabled:opacity-60"
+              className="h-12 rounded-xl bg-cyan-400 px-4 text-sm font-medium text-[#041018] disabled:opacity-60 sm:h-11"
               disabled={!canSend || isProcessing}
             >
               {isProcessing ? "sending..." : "send"}
@@ -376,7 +376,7 @@ export default function ChatDemoPage() {
           </form>
         </section>
 
-        <aside className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-4 lg:w-96">
+        <aside className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4 lg:w-96">
           <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-300">
             activity panel
           </h2>
