@@ -98,14 +98,14 @@ function chooseToolFromUserPrompt(
 ): MockModelToolCall | null {
   const text = normalize(prompt);
 
+  const hasCalled = (toolName: string): boolean =>
+    priorToolCalls.includes(toolName);
+
   const isMarketingLaunchIntent =
     text.includes("launch") || text.includes("marketing") || text.includes("discount");
 
   if (isMarketingLaunchIntent) {
-    const hasGeneratedCopy = priorToolCalls.includes("generate_product_listing");
-    const hasCreatedDiscount = priorToolCalls.includes("shopify_discounts_collections");
-
-    if (!hasGeneratedCopy) {
+    if (!hasCalled("generate_product_listing")) {
       return {
         kind: "tool_call",
         toolName: "generate_product_listing",
@@ -114,7 +114,7 @@ function chooseToolFromUserPrompt(
       };
     }
 
-    if (!hasCreatedDiscount) {
+    if (!hasCalled("shopify_discounts_collections")) {
       return {
         kind: "tool_call",
         toolName: "shopify_discounts_collections",
@@ -139,10 +139,7 @@ function chooseToolFromUserPrompt(
     text.includes("start store");
 
   if (isZeroToStoreIntent) {
-    const hasGeneratedListing = priorToolCalls.includes("generate_product_listing");
-    const hasCreatedProduct = priorToolCalls.includes("shopify_create_product");
-
-    if (!hasGeneratedListing) {
+    if (!hasCalled("generate_product_listing")) {
       return {
         kind: "tool_call",
         toolName: "generate_product_listing",
@@ -151,7 +148,7 @@ function chooseToolFromUserPrompt(
       };
     }
 
-    if (!hasCreatedProduct) {
+    if (!hasCalled("shopify_create_product")) {
       return {
         kind: "tool_call",
         toolName: "shopify_create_product",
@@ -169,34 +166,48 @@ function chooseToolFromUserPrompt(
     return null;
   }
 
+  const isMarketResearchIntent =
+    text.includes("market") ||
+    text.includes("trend") ||
+    text.includes("research") ||
+    text.includes("competitor");
+
+  if (isMarketResearchIntent) {
+    if (!hasCalled("research_market")) {
+      return {
+        kind: "tool_call",
+        toolName: "research_market",
+        input: { query: prompt },
+        assistantThought: "i'll run market research first.",
+      };
+    }
+
+    if (!hasCalled("research_competitors")) {
+      return {
+        kind: "tool_call",
+        toolName: "research_competitors",
+        input: { query: prompt },
+        assistantThought: "next i'll analyze competitor pricing and positioning.",
+      };
+    }
+
+    return null;
+  }
+
   if (
     text.includes("list products") ||
     text.includes("show products") ||
     text.includes("products")
   ) {
+    if (hasCalled("shopify_list_products")) {
+      return null;
+    }
+
     return {
       kind: "tool_call",
       toolName: "shopify_list_products",
       input: { limit: 10 },
       assistantThought: "i'll check your product catalog first.",
-    };
-  }
-
-  if (text.includes("market") || text.includes("trend")) {
-    return {
-      kind: "tool_call",
-      toolName: "research_market",
-      input: { query: prompt },
-      assistantThought: "i'll run market research for that request.",
-    };
-  }
-
-  if (text.includes("competitor")) {
-    return {
-      kind: "tool_call",
-      toolName: "research_competitors",
-      input: { query: prompt },
-      assistantThought: "i'll analyze competitors first.",
     };
   }
 

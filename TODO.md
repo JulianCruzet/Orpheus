@@ -85,7 +85,7 @@ owner: julian + ali (+ faye support)
 
 ## 9) flow completion targets (hackathon)
 - [x] flow 1 (zero-to-store) works end-to-end live
-- [ ] flow 2 (market intelligence) works with real or cached data
+- [x] flow 2 (market intelligence) works with real or cached data
 - [ ] flow 3 (inventory + orders) works with real data
 - [x] flow 4 (marketing launch) works at least partially (copy + discount)
 
