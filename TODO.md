@@ -90,12 +90,12 @@ owner: julian + ali (+ faye support)
 - [ ] flow 4 (marketing launch) works at least partially (copy + discount)
 
 ## 10) judging polish
-- [ ] align demo narrative to judging criteria:
-  - [ ] innovation
-  - [ ] technical complexity
-  - [ ] functionality
-  - [ ] presentation quality
-  - [ ] real-world applicability
+- [x] align demo narrative to judging criteria:
+  - [x] innovation
+  - [x] technical complexity
+  - [x] functionality
+  - [x] presentation quality
+  - [x] real-world applicability
 - [x] add concise architecture slide/diagram
 - [ ] rehearse 3-5 minute pitch with strict timing
 
