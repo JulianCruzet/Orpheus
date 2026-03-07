@@ -96,7 +96,7 @@ owner: julian + ali (+ faye support)
   - [ ] functionality
   - [ ] presentation quality
   - [ ] real-world applicability
-- [ ] add concise architecture slide/diagram
+- [x] add concise architecture slide/diagram
 - [ ] rehearse 3-5 minute pitch with strict timing
 
 ## 11) stretch goals (if p0 is done)
