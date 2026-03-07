@@ -1,6 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import type { Session } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type ToolEventStatus = "pending" | "success" | "error";
 
@@ -113,6 +117,11 @@ function buildRichBlocks(text: string, baseId: number): RichBlock[] {
 }
 
 export default function ChatDemoPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatBubble[]>([
     {
@@ -124,6 +133,36 @@ export default function ChatDemoPage() {
   ]);
   const [events, setEvents] = useState<ToolEvent[]>([]);
   const [richBlocks, setRichBlocks] = useState<RichBlock[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setSession(data.session);
+      setAuthLoading(false);
+
+      if (!data.session) {
+        router.replace("/auth?next=/chat");
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      setSession(nextSession);
+
+      if (!nextSession) {
+        router.replace("/auth?next=/chat");
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router, supabase]);
 
   const canSend = draft.trim().length > 0;
 
@@ -137,6 +176,11 @@ export default function ChatDemoPage() {
 
   function handleQuickPromptClick(prompt: string): void {
     setDraft(prompt);
+  }
+
+  async function handleSignOut(): Promise<void> {
+    await supabase.auth.signOut();
+    router.replace("/auth");
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
@@ -197,18 +241,51 @@ export default function ChatDemoPage() {
     setDraft("");
   }
 
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#05070f] text-white">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100"
+        >
+          checking authentication...
+        </motion.div>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
   return (
     <main className="min-h-screen bg-[#05070f] text-white">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-8 lg:flex-row">
         <section className="flex min-h-[70vh] flex-1 flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <header className="mb-4 border-b border-white/10 pb-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">
-              shams-e demo
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold">agent chat</h1>
-            <p className="mt-1 text-sm text-white/70">
-              prototype surface for tool-driven commerce conversations.
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">
+                  shams-e demo
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold">agent chat</h1>
+                <p className="mt-1 text-sm text-white/70">
+                  prototype surface for tool-driven commerce conversations.
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-xs text-white/55">{session.user.email}</p>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/80 transition hover:border-cyan-300/50 hover:text-cyan-100"
+                >
+                  sign out
+                </button>
+              </div>
+            </div>
           </header>
 
           <div className="mb-3 flex flex-wrap gap-2">

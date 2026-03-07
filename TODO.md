@@ -99,7 +99,23 @@ owner: julian + ali (+ faye support)
 - [x] add concise architecture slide/diagram
 - [x] rehearse 3-5 minute pitch with strict timing
 
-## 11) stretch goals (if p0 is done)
+## 11) UI/UX excellence pass (must feel premium)
+- [ ] elevate typography scale/weights and spacing rhythm to match landing-page quality
+- [ ] improve chat information hierarchy (primary actions vs secondary metadata)
+- [ ] add tasteful Framer Motion micro-interactions (message enter, tool state transitions, hover/focus)
+- [ ] add polished loading/skeleton and async state choreography
+- [ ] tighten mobile/responsive layout behavior and touch targets
+- [ ] improve visual consistency of rich result blocks (product/research/confirmation)
+- [ ] run final UX heuristics pass (clarity, feedback, error recovery, perceived speed)
+
+## 12) authentication (supabase)
+- [x] add Supabase browser client wiring
+- [x] create auth screen with sign in + create account + magic link
+- [x] protect `/chat` behind authenticated session checks
+- [x] add sign-out control in chat UI
+- [x] add auth env vars to `.env.example`
+
+## 13) stretch goals (if p0 is done)
 - [x] image generation tool (`generate_product_image`)
 - [x] discounts + collections tooling
 - [x] analytics insight tool (`analyze_store_performance`)
