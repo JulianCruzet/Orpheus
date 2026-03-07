@@ -81,7 +81,7 @@ owner: julian + ali (+ faye support)
 - [x] build `MOCK_MODE=true` path for offline/fallback demo
 - [x] pre-seed demo store data (products/orders/inventory)
 - [x] cache at least one market research response for backup
-- [ ] produce backup video (3 minutes) in case live APIs fail
+- [x] produce backup video (3 minutes) in case live APIs fail
 
 ## 9) flow completion targets (hackathon)
 - [x] flow 1 (zero-to-store) works end-to-end live
