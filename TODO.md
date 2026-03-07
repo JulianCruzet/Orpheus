@@ -87,7 +87,7 @@ owner: julian + ali (+ faye support)
 - [ ] flow 1 (zero-to-store) works end-to-end live
 - [ ] flow 2 (market intelligence) works with real or cached data
 - [ ] flow 3 (inventory + orders) works with real data
-- [ ] flow 4 (marketing launch) works at least partially (copy + discount)
+- [x] flow 4 (marketing launch) works at least partially (copy + discount)
 
 ## 10) judging polish
 - [x] align demo narrative to judging criteria:

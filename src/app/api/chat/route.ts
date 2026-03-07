@@ -92,8 +92,44 @@ function normalize(input: string): string {
   return input.toLowerCase().trim();
 }
 
-function chooseToolFromUserPrompt(prompt: string): MockModelToolCall | null {
+function chooseToolFromUserPrompt(
+  prompt: string,
+  priorToolCalls: string[],
+): MockModelToolCall | null {
   const text = normalize(prompt);
+
+  const isMarketingLaunchIntent =
+    text.includes("launch") || text.includes("marketing") || text.includes("discount");
+
+  if (isMarketingLaunchIntent) {
+    const hasGeneratedCopy = priorToolCalls.includes("generate_product_listing");
+    const hasCreatedDiscount = priorToolCalls.includes("shopify_discounts_collections");
+
+    if (!hasGeneratedCopy) {
+      return {
+        kind: "tool_call",
+        toolName: "generate_product_listing",
+        input: { prompt },
+        assistantThought: "i'll generate launch-ready product copy first.",
+      };
+    }
+
+    if (!hasCreatedDiscount) {
+      return {
+        kind: "tool_call",
+        toolName: "shopify_discounts_collections",
+        input: {
+          action: "create_discount",
+          title: "launch-boost",
+          percentageOff: 10,
+          confirmed: true,
+        },
+        assistantThought: "now i'll create a launch discount to support the campaign.",
+      };
+    }
+
+    return null;
+  }
 
   if (
     text.includes("list products") ||
@@ -129,17 +165,20 @@ function chooseToolFromUserPrompt(prompt: string): MockModelToolCall | null {
   return null;
 }
 
+function getPriorToolCalls(conversation: ChatMessage[]): string[] {
+  return conversation
+    .filter((message) => message.role === "assistant")
+    .map((message) => {
+      if (!message.content.startsWith("tool_call:")) {
+        return null;
+      }
+
+      return message.content.slice("tool_call:".length);
+    })
+    .filter((toolName): toolName is string => Boolean(toolName));
+}
+
 function mockModelRespond(conversation: ChatMessage[]): MockModelStep {
-  const lastMessage = conversation[conversation.length - 1];
-
-  if (lastMessage?.role === "tool") {
-    return {
-      kind: "final",
-      response:
-        "i used the requested tool and captured the result. once real handlers are wired, this response will include live business output.",
-    };
-  }
-
   const lastUserMessage = [...conversation]
     .reverse()
     .find((message) => message.role === "user");
@@ -151,7 +190,8 @@ function mockModelRespond(conversation: ChatMessage[]): MockModelStep {
     };
   }
 
-  const toolCall = chooseToolFromUserPrompt(lastUserMessage.content);
+  const priorToolCalls = getPriorToolCalls(conversation);
+  const toolCall = chooseToolFromUserPrompt(lastUserMessage.content, priorToolCalls);
 
   if (toolCall) {
     return toolCall;
@@ -364,15 +404,16 @@ export async function POST(request: NextRequest): Promise<Response> {
               result: toolResult,
             });
 
+            const redactedToolResult: StructuredToolResult<unknown> = {
+              ...toolResult,
+              data: redactSensitiveData(toolResult.data),
+              error: redactSensitiveData(toolResult.error),
+            };
+
             controller.enqueue(
               encoder.encode(
                 toSseEvent("tool_result", {
-                  toolName: toolResult.toolName,
-                  status: toolResult.status,
-                  message: toolResult.message,
-                  data: redactSensitiveData(toolResult.data),
-                  error: redactSensitiveData(toolResult.error),
-                  meta: toolResult.meta,
+                  result: redactedToolResult,
                 }),
               ),
             );
