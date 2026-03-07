@@ -13,6 +13,7 @@ import {
 } from "@/lib/tools/types";
 import { researchMarket } from "@/lib/tools/research-market";
 import { researchCompetitors } from "@/lib/tools/research-competitors";
+import { generateProductImage } from "@/lib/tools/generate-product-image";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -116,6 +117,11 @@ export const toolRegistry: ToolRegistry = {
     name: "research_competitors",
     description: "Analyze competitor products and positioning.",
     handler: withToolLogging("research_competitors", researchCompetitors),
+  },
+  generate_product_image: {
+    name: "generate_product_image",
+    description: "Generate a product image URL from a text prompt.",
+    handler: withToolLogging("generate_product_image", generateProductImage),
   },
 };
 

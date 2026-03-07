@@ -125,6 +125,22 @@ const mockHandlers: Record<string, MockToolHandler> = {
       source: "mock",
     });
   },
+
+  generate_product_image: async (input) => {
+    const payload = (input as Record<string, unknown>) ?? {};
+    const prompt =
+      typeof payload.prompt === "string" && payload.prompt.trim().length > 0
+        ? payload.prompt.trim()
+        : "premium product on clean studio backdrop";
+
+    return success("mock mode: generated product image preview URL.", {
+      imageUrl: `https://picsum.photos/seed/${Date.now()}/1024/1024`,
+      prompt,
+      style: payload.style ?? "studio",
+      aspectRatio: payload.aspectRatio ?? "1:1",
+      source: "mock",
+    });
+  },
 };
 
 export function isMockModeEnabled(): boolean {

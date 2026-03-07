@@ -100,7 +100,7 @@ owner: julian + ali (+ faye support)
 - [ ] rehearse 3-5 minute pitch with strict timing
 
 ## 11) stretch goals (if p0 is done)
-- [ ] image generation tool (`generate_product_image`)
+- [x] image generation tool (`generate_product_image`)
 - [ ] discounts + collections tooling
 - [ ] analytics insight tool (`analyze_store_performance`)
 - [ ] customer response drafting
