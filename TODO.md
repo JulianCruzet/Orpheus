@@ -101,7 +101,7 @@ owner: julian + ali (+ faye support)
 
 ## 11) stretch goals (if p0 is done)
 - [x] image generation tool (`generate_product_image`)
-- [ ] discounts + collections tooling
+- [x] discounts + collections tooling
 - [ ] analytics insight tool (`analyze_store_performance`)
 - [ ] customer response drafting
 

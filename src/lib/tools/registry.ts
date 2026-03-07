@@ -14,6 +14,7 @@ import {
 import { researchMarket } from "@/lib/tools/research-market";
 import { researchCompetitors } from "@/lib/tools/research-competitors";
 import { generateProductImage } from "@/lib/tools/generate-product-image";
+import { shopifyDiscountsAndCollections } from "@/lib/tools/shopify-discounts-collections";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -122,6 +123,15 @@ export const toolRegistry: ToolRegistry = {
     name: "generate_product_image",
     description: "Generate a product image URL from a text prompt.",
     handler: withToolLogging("generate_product_image", generateProductImage),
+  },
+  shopify_discounts_collections: {
+    name: "shopify_discounts_collections",
+    description:
+      "Manage Shopify discounts and collections (list/create).",
+    handler: withToolLogging(
+      "shopify_discounts_collections",
+      shopifyDiscountsAndCollections,
+    ),
   },
 };
 
