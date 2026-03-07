@@ -131,6 +131,44 @@ function chooseToolFromUserPrompt(
     return null;
   }
 
+  const isZeroToStoreIntent =
+    text.includes("zero") ||
+    text.includes("from scratch") ||
+    text.includes("create product") ||
+    text.includes("new product") ||
+    text.includes("start store");
+
+  if (isZeroToStoreIntent) {
+    const hasGeneratedListing = priorToolCalls.includes("generate_product_listing");
+    const hasCreatedProduct = priorToolCalls.includes("shopify_create_product");
+
+    if (!hasGeneratedListing) {
+      return {
+        kind: "tool_call",
+        toolName: "generate_product_listing",
+        input: { prompt },
+        assistantThought: "i'll generate the product copy package first.",
+      };
+    }
+
+    if (!hasCreatedProduct) {
+      return {
+        kind: "tool_call",
+        toolName: "shopify_create_product",
+        input: {
+          title: "AI Launch Product",
+          description: "created via shams-e zero-to-store flow",
+          price: 49.99,
+          tags: ["ai", "launch", "demo"],
+          confirmed: true,
+        },
+        assistantThought: "great, now i'll publish that as a new shopify product.",
+      };
+    }
+
+    return null;
+  }
+
   if (
     text.includes("list products") ||
     text.includes("show products") ||
