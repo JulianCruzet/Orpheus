@@ -97,7 +97,7 @@ owner: julian + ali (+ faye support)
   - [x] presentation quality
   - [x] real-world applicability
 - [x] add concise architecture slide/diagram
-- [ ] rehearse 3-5 minute pitch with strict timing
+- [x] rehearse 3-5 minute pitch with strict timing
 
 ## 11) stretch goals (if p0 is done)
 - [x] image generation tool (`generate_product_image`)
