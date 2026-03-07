@@ -1,3 +1,4 @@
+import { executeMockTool, isMockModeEnabled } from "@/lib/tools/mock-tools";
 import { toStructuredToolResult } from "@/lib/tools/structured-result";
 import { generateProductListing } from "@/lib/tools/generate-product-listing";
 import { shopifyCreateProduct } from "@/lib/tools/shopify-create-product";
@@ -132,6 +133,14 @@ export async function executeTool(
   toolName: string,
   input: unknown,
 ): Promise<StructuredToolResult<unknown>> {
+  if (isMockModeEnabled()) {
+    const mockResult = await executeMockTool(toolName, input);
+
+    if (mockResult) {
+      return toStructuredToolResult(toolName, mockResult);
+    }
+  }
+
   const toolDefinition = getToolDefinition(toolName);
 
   if (!toolDefinition) {
