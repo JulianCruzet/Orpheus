@@ -74,6 +74,34 @@ function getRichBlockStyle(type: RichBlockType): string {
   return "border-emerald-300/40 bg-emerald-400/10 text-emerald-100";
 }
 
+function getRichBlockMeta(type: RichBlockType): {
+  label: string;
+  icon: string;
+  chipClass: string;
+} {
+  if (type === "product_card") {
+    return {
+      label: "product preview",
+      icon: "◈",
+      chipClass: "border-cyan-200/30 bg-cyan-300/10 text-cyan-100/90",
+    };
+  }
+
+  if (type === "market_research_summary") {
+    return {
+      label: "market insight",
+      icon: "◉",
+      chipClass: "border-violet-200/30 bg-violet-300/10 text-violet-100/90",
+    };
+  }
+
+  return {
+    label: "action confirmation",
+    icon: "✓",
+    chipClass: "border-emerald-200/30 bg-emerald-300/10 text-emerald-100/90",
+  };
+}
+
 function buildRichBlocks(text: string, baseId: number): RichBlock[] {
   const lowerText = text.toLowerCase();
 
@@ -430,26 +458,36 @@ export default function ChatDemoPage() {
                 no rich blocks yet. try prompts about products, research, or confirmation.
               </p>
             ) : (
-              richBlocks.map((block) => (
-                <motion.div
-                  key={block.id}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.18 }}
-                  className={`rounded-xl border px-3 py-2 ${getRichBlockStyle(
-                    block.type,
-                  )}`}
-                >
-                  <p className="text-xs uppercase tracking-[0.12em] opacity-80">
-                    {block.type.replaceAll("_", " ")}
-                  </p>
-                  <p className="mt-1 text-sm font-medium">{block.title}</p>
-                  <p className="mt-1 text-sm">{block.body}</p>
-                  {block.meta ? (
-                    <p className="mt-1 text-xs opacity-75">{block.meta}</p>
-                  ) : null}
-                </motion.div>
-              ))
+              richBlocks.map((block) => {
+                const meta = getRichBlockMeta(block.type);
+
+                return (
+                  <motion.div
+                    key={block.id}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.18 }}
+                    className={`rounded-xl border px-3 py-3 ${getRichBlockStyle(
+                      block.type,
+                    )}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${meta.chipClass}`}
+                      >
+                        {meta.label}
+                      </span>
+                      <span className="text-xs opacity-80">{meta.icon}</span>
+                    </div>
+
+                    <p className="mt-2 text-sm font-semibold leading-5">{block.title}</p>
+                    <p className="mt-1 text-sm leading-5 opacity-95">{block.body}</p>
+                    {block.meta ? (
+                      <p className="mt-2 text-[11px] uppercase tracking-[0.1em] opacity-70">{block.meta}</p>
+                    ) : null}
+                  </motion.div>
+                );
+              })
             )}
           </div>
         </aside>
