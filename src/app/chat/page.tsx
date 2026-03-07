@@ -207,8 +207,15 @@ export default function ChatDemoPage() {
     return "pick a quick prompt or type a message to start the demo.";
   }, [canSend, isProcessing]);
 
+  const lastEvent = events[0] ?? null;
+  const hasRecentError = lastEvent?.status === "error";
+
   function handleQuickPromptClick(prompt: string): void {
     setDraft(prompt);
+  }
+
+  function handleRecoveryPrompt(): void {
+    setDraft("list products with low inventory");
   }
 
   async function handleSignOut(): Promise<void> {
@@ -350,7 +357,20 @@ export default function ChatDemoPage() {
             </div>
           </div>
 
-          <p className="mb-3 text-xs leading-5 text-white/55">{helperText}</p>
+          <p aria-live="polite" className="mb-3 text-xs leading-5 text-white/55">{helperText}</p>
+
+          {hasRecentError ? (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-rose-300/35 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
+              <p>last run hit an error. try a safe prompt to recover quickly.</p>
+              <button
+                type="button"
+                onClick={handleRecoveryPrompt}
+                className="rounded-md border border-rose-200/40 px-2 py-1 text-[11px] uppercase tracking-[0.08em] hover:bg-rose-300/20"
+              >
+                use recovery prompt
+              </button>
+            </div>
+          ) : null}
 
           <div className="flex-1 space-y-3 overflow-auto pr-1">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">conversation</p>

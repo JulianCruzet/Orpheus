@@ -106,7 +106,7 @@ owner: julian + ali (+ faye support)
 - [x] add polished loading/skeleton and async state choreography
 - [x] tighten mobile/responsive layout behavior and touch targets
 - [x] improve visual consistency of rich result blocks (product/research/confirmation)
-- [ ] run final UX heuristics pass (clarity, feedback, error recovery, perceived speed)
+- [x] run final UX heuristics pass (clarity, feedback, error recovery, perceived speed)
 
 ## 12) authentication (supabase)
 - [x] add Supabase browser client wiring
