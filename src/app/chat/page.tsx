@@ -306,15 +306,18 @@ export default function ChatDemoPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {quickPrompts.map((prompt) => (
-                <button
+                <motion.button
                   key={prompt}
                   type="button"
                   onClick={() => handleQuickPromptClick(prompt)}
                   disabled={isProcessing}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
                   className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   {prompt}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -325,8 +328,11 @@ export default function ChatDemoPage() {
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/40">conversation</p>
 
             {messages.map((message) => (
-              <div
+              <motion.div
                 key={message.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
                 className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
                   message.role === "assistant"
                     ? "border border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
@@ -337,7 +343,7 @@ export default function ChatDemoPage() {
                   {message.role === "assistant" ? "assistant" : "you"}
                 </p>
                 <p>{message.content}</p>
-              </div>
+              </motion.div>
             ))}
 
             {isProcessing ? (
@@ -385,8 +391,11 @@ export default function ChatDemoPage() {
               </p>
             ) : (
               events.map((item) => (
-                <div
+                <motion.div
                   key={item.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
                   className={`rounded-xl border px-3 py-2 text-sm ${getToolEventStyle(
                     item.status,
                   )}`}
@@ -401,7 +410,7 @@ export default function ChatDemoPage() {
                   </div>
                   <p className="mt-2 text-sm font-medium">{item.summary}</p>
                   <p className="mt-1 text-[11px] opacity-70">updated {item.timestamp}</p>
-                </div>
+                </motion.div>
               ))
             )}
 
@@ -422,8 +431,11 @@ export default function ChatDemoPage() {
               </p>
             ) : (
               richBlocks.map((block) => (
-                <div
+                <motion.div
                   key={block.id}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.18 }}
                   className={`rounded-xl border px-3 py-2 ${getRichBlockStyle(
                     block.type,
                   )}`}
@@ -436,7 +448,7 @@ export default function ChatDemoPage() {
                   {block.meta ? (
                     <p className="mt-1 text-xs opacity-75">{block.meta}</p>
                   ) : null}
-                </div>
+                </motion.div>
               ))
             )}
           </div>
