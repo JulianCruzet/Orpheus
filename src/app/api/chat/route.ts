@@ -194,6 +194,55 @@ function chooseToolFromUserPrompt(
     return null;
   }
 
+  const isInventoryOrdersIntent =
+    text.includes("inventory") ||
+    text.includes("stock") ||
+    text.includes("restock") ||
+    text.includes("order") ||
+    text.includes("fulfillment");
+
+  if (isInventoryOrdersIntent) {
+    if (!hasCalled("shopify_manage_orders")) {
+      return {
+        kind: "tool_call",
+        toolName: "shopify_manage_orders",
+        input: { action: "list", limit: 10 },
+        assistantThought: "i'll pull your latest orders first.",
+      };
+    }
+
+    if (!hasCalled("shopify_manage_inventory")) {
+      const wantsUpdate =
+        text.includes("update") ||
+        text.includes("confirm") ||
+        text.includes("set") ||
+        text.includes("restock");
+
+      return {
+        kind: "tool_call",
+        toolName: "shopify_manage_inventory",
+        input: wantsUpdate
+          ? {
+              action: "update",
+              inventoryItemId: 1001,
+              locationId: 2001,
+              available: 24,
+              confirmed: text.includes("confirm"),
+            }
+          : {
+              action: "read",
+              inventoryItemId: 1001,
+              locationId: 2001,
+            },
+        assistantThought: wantsUpdate
+          ? "next i'll prepare the inventory update request."
+          : "next i'll fetch the inventory snapshot.",
+      };
+    }
+
+    return null;
+  }
+
   if (
     text.includes("list products") ||
     text.includes("show products") ||
@@ -249,7 +298,7 @@ function mockModelRespond(conversation: ChatMessage[]): MockModelStep {
   return {
     kind: "final",
     response:
-      "got it. i can help with products, market research, and competitors once you ask for one of those flows.",
+      "got it. i can help with products, market research, competitors, inventory, and orders once you ask for one of those flows.",
   };
 }
 
