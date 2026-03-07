@@ -300,23 +300,30 @@ export default function ChatDemoPage() {
             </div>
           </header>
 
-          <div className="mb-3 flex flex-wrap gap-2">
-            {quickPrompts.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => handleQuickPromptClick(prompt)}
-                disabled={isProcessing}
-                className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                {prompt}
-              </button>
-            ))}
+          <div className="mb-3">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
+              quick actions
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => handleQuickPromptClick(prompt)}
+                  disabled={isProcessing}
+                  className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
 
           <p className="mb-3 text-xs text-white/50">{helperText}</p>
 
           <div className="flex-1 space-y-3 overflow-auto pr-1">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-white/40">conversation</p>
+
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -326,13 +333,17 @@ export default function ChatDemoPage() {
                     : "ml-auto border border-white/20 bg-[#0b1220] text-white"
                 }`}
               >
-                {message.content}
+                <p className="mb-1 text-[10px] uppercase tracking-[0.12em] opacity-60">
+                  {message.role === "assistant" ? "assistant" : "you"}
+                </p>
+                <p>{message.content}</p>
               </div>
             ))}
 
             {isProcessing ? (
               <div className="max-w-[70%] animate-pulse rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100/80">
-                assistant is thinking...
+                <p className="mb-1 text-[10px] uppercase tracking-[0.12em] opacity-60">assistant</p>
+                <p>assistant is thinking...</p>
               </div>
             ) : null}
           </div>
@@ -380,12 +391,16 @@ export default function ChatDemoPage() {
                     item.status,
                   )}`}
                 >
-                  <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-[0.12em]">
-                    <span>{item.toolName}</span>
-                    <span>{item.status}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] uppercase tracking-[0.14em] opacity-80">
+                      {item.toolName}
+                    </span>
+                    <span className="rounded-full border border-current/35 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]">
+                      {item.status}
+                    </span>
                   </div>
-                  <p className="mt-1 text-sm">{item.summary}</p>
-                  <p className="mt-1 text-xs opacity-75">{item.timestamp}</p>
+                  <p className="mt-2 text-sm font-medium">{item.summary}</p>
+                  <p className="mt-1 text-[11px] opacity-70">updated {item.timestamp}</p>
                 </div>
               ))
             )}
