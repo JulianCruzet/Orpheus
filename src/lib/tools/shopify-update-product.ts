@@ -14,9 +14,39 @@ interface ShopifyUpdateProductResponse {
   product: {
     id: number;
     title: string;
+    body_html?: string;
     status?: string;
     tags?: string;
     vendor?: string;
+  };
+}
+
+interface ShopifyGetProductResponse {
+  product: {
+    id: number;
+    title: string;
+    body_html?: string;
+    status?: string;
+    tags?: string;
+    vendor?: string;
+  };
+}
+
+interface UndoPayload {
+  id: number;
+  title?: string;
+  bodyHtml?: string;
+  status?: string;
+  vendor?: string;
+  tags?: string[];
+}
+
+interface ShopifyUpdateProductOutput {
+  product: ShopifyUpdateProductResponse["product"];
+  undo: {
+    tool: "shopify_update_product";
+    input: UndoPayload;
+    summary: string;
   };
 }
 
@@ -43,6 +73,57 @@ function normalizePayload(input: ShopifyUpdateProductInput): Record<string, unkn
   };
 }
 
+function splitTags(tags?: string): string[] {
+  if (!tags?.trim()) {
+    return [];
+  }
+
+  return tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function buildUndoPayload(
+  before: ShopifyGetProductResponse["product"],
+  requestedUpdate: ShopifyUpdateProductInput,
+): UndoPayload {
+  const undo: UndoPayload = { id: before.id };
+
+  if ("title" in requestedUpdate) {
+    undo.title = before.title;
+  }
+
+  if ("bodyHtml" in requestedUpdate) {
+    undo.bodyHtml = before.body_html;
+  }
+
+  if ("status" in requestedUpdate) {
+    undo.status = before.status;
+  }
+
+  if ("vendor" in requestedUpdate) {
+    undo.vendor = before.vendor;
+  }
+
+  if ("tags" in requestedUpdate) {
+    undo.tags = splitTags(before.tags);
+  }
+
+  return undo;
+}
+
+async function getProduct(
+  client: ShopifyClient,
+  id: number,
+): Promise<ShopifyGetProductResponse["product"]> {
+  const response = await client.request<ShopifyGetProductResponse>(
+    `/products/${id}.json`,
+  );
+
+  return response.product;
+}
+
 async function updateProduct(
   client: ShopifyClient,
   input: ShopifyUpdateProductInput,
@@ -62,7 +143,7 @@ async function updateProduct(
 
 export async function shopifyUpdateProduct(
   input: ShopifyUpdateProductInput,
-): Promise<ToolExecutionResult<ShopifyUpdateProductResponse["product"]>> {
+): Promise<ToolExecutionResult<ShopifyUpdateProductOutput>> {
   if (!Number.isFinite(input?.id) || input.id <= 0) {
     return {
       status: "error",
@@ -84,27 +165,53 @@ export async function shopifyUpdateProduct(
   }
 
   if (isMockModeEnabled()) {
+    const product = {
+      id: input.id,
+      title: input.title ?? "Mock Product",
+      body_html: input.bodyHtml,
+      status: input.status ?? "active",
+      tags: input.tags?.join(", "),
+      vendor: input.vendor ?? "Shams-E",
+    };
+
     return {
       status: "success",
-      message: `mock update complete for product ${input.id}.`,
+      message: `mock update complete for product ${input.id}. you can undo with the returned payload.`,
       data: {
-        id: input.id,
-        title: input.title ?? "Mock Product",
-        status: input.status ?? "active",
-        tags: input.tags?.join(", "),
-        vendor: input.vendor ?? "Shams-E",
+        product,
+        undo: {
+          tool: "shopify_update_product",
+          input: {
+            id: input.id,
+            title: "Mock Product",
+            bodyHtml: "Mock description",
+            status: "active",
+            vendor: "Shams-E",
+            tags: ["mock", "demo"],
+          },
+          summary: "run shopify_update_product with this input to restore previous values.",
+        },
       },
     };
   }
 
   try {
     const client = createShopifyClientFromEnv();
+    const previous = await getProduct(client, input.id);
     const product = await updateProduct(client, input);
+    const undoInput = buildUndoPayload(previous, input);
 
     return {
       status: "success",
-      message: `updated product ${product.id}.`,
-      data: product,
+      message: `updated product ${product.id}. undo data included for reversible fields.`,
+      data: {
+        product,
+        undo: {
+          tool: "shopify_update_product",
+          input: undoInput,
+          summary: "run shopify_update_product with this input to revert this change.",
+        },
+      },
     };
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unknown error";
