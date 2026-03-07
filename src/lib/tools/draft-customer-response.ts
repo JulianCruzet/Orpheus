@@ -30,7 +30,7 @@ function isMockModeEnabled(): boolean {
 
 function validateInput(
   input: DraftCustomerResponseInput,
-): ToolExecutionResult<null> | null {
+): ToolExecutionResult<never> | null {
   if (!input || typeof input !== "object") {
     return {
       status: "error",

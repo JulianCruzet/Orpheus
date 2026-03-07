@@ -167,7 +167,7 @@ function parseListLimit(limit: number | undefined): number {
   return Math.min(normalized, MAX_LIMIT);
 }
 
-function validateInput(input: ShopifyManageOrdersInput): ToolExecutionResult<null> | null {
+function validateInput(input: ShopifyManageOrdersInput): ToolExecutionResult<never> | null {
   const action = input.action ?? "list";
 
   if (action !== "list" && action !== "detail") {

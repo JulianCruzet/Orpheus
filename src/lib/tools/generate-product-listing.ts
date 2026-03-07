@@ -105,7 +105,7 @@ function buildMockOutput(input: GenerateProductListingInput): GenerateProductLis
 
 function validateInput(
   input: GenerateProductListingInput,
-): ToolExecutionResult<null> | null {
+): ToolExecutionResult<never> | null {
   if (!input || typeof input !== "object") {
     return {
       status: "error",

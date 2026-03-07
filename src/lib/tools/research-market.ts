@@ -49,7 +49,7 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function validateInput(input: ResearchMarketInput): ToolExecutionResult<null> | null {
+function validateInput(input: ResearchMarketInput): ToolExecutionResult<never> | null {
   if (!input || typeof input !== "object") {
     return {
       status: "error",

@@ -46,7 +46,7 @@ function normalizeTags(tags: string[] | undefined): string {
 
 function validateInput(
   input: ShopifyCreateProductInput,
-): ToolExecutionResult<null> | null {
+): ToolExecutionResult<never> | null {
   if (!input || typeof input !== "object") {
     return {
       status: "error",

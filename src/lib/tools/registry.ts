@@ -9,6 +9,7 @@ import { shopifyManageInventory } from "@/lib/tools/shopify-manage-inventory";
 import {
   StructuredToolResult,
   ToolDefinition,
+  ToolExecutionResult,
   ToolRegistry,
 } from "@/lib/tools/types";
 import { researchMarket } from "@/lib/tools/research-market";

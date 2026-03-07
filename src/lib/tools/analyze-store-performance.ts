@@ -36,7 +36,7 @@ function clampScore(value: number): number {
 
 function validateInput(
   input: AnalyzeStorePerformanceInput,
-): ToolExecutionResult<null> | null {
+): ToolExecutionResult<never> | null {
   if (!input || typeof input !== "object") {
     return {
       status: "error",

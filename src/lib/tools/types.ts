@@ -22,7 +22,7 @@ export interface ToolExecutionResult<TOutput = unknown> {
   };
 }
 
-export type ToolRegistry = Record<string, ToolDefinition<unknown, unknown>>;
+export type ToolRegistry = Record<string, ToolDefinition<any, any>>;
 
 export interface StructuredToolResult<TOutput = unknown> {
   type: "tool_result";
