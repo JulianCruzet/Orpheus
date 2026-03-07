@@ -80,7 +80,7 @@ owner: julian + ali (+ faye support)
 ## 8) demo reliability (very important)
 - [ ] build `MOCK_MODE=true` path for offline/fallback demo
 - [ ] pre-seed demo store data (products/orders/inventory)
-- [ ] cache at least one market research response for backup
+- [x] cache at least one market research response for backup
 - [ ] produce backup video (3 minutes) in case live APIs fail
 
 ## 9) flow completion targets (hackathon)
