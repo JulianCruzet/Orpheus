@@ -103,7 +103,7 @@ owner: julian + ali (+ faye support)
 - [x] image generation tool (`generate_product_image`)
 - [x] discounts + collections tooling
 - [x] analytics insight tool (`analyze_store_performance`)
-- [ ] customer response drafting
+- [x] customer response drafting
 
 ## proposed build order (fastest path)
 1. `/api/chat` + mock tool registry

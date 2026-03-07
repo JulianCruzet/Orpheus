@@ -16,6 +16,7 @@ import { researchCompetitors } from "@/lib/tools/research-competitors";
 import { generateProductImage } from "@/lib/tools/generate-product-image";
 import { shopifyDiscountsAndCollections } from "@/lib/tools/shopify-discounts-collections";
 import { analyzeStorePerformance } from "@/lib/tools/analyze-store-performance";
+import { draftCustomerResponse } from "@/lib/tools/draft-customer-response";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -140,6 +141,14 @@ export const toolRegistry: ToolRegistry = {
     handler: withToolLogging(
       "analyze_store_performance",
       analyzeStorePerformance,
+    ),
+  },
+  draft_customer_response: {
+    name: "draft_customer_response",
+    description: "Draft a support reply to a customer message.",
+    handler: withToolLogging(
+      "draft_customer_response",
+      draftCustomerResponse,
     ),
   },
 };
