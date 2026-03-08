@@ -1,4 +1,4 @@
-# <img src="https://img.shields.io/badge/-%E2%97%BC-5EEAD4?style=flat-square" alt="" height="20"/> Shams-E
+# Shams-E
 
 **AI-Powered E-Commerce Copilot for Shopify**
 
