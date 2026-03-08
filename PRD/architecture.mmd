@@ -1,0 +1,22 @@
+flowchart LR
+  U[Store Owner]
+  UI[Next.js Chat UI<br/>/app/chat]
+  API[api chat]
+  AGENT[Gemini Agent Loop<br/>intent + tool orchestration]
+  REG[Tool Registry]
+
+  SHOP[Shopify Admin API]
+  RS[Research Sources<br/>Firecrawl/Web]
+  IMG[Image Generation]
+
+  DB[(SQLite + Drizzle<br/>conversations/messages/action_log)]
+  SAFE[Safety Layer<br/>confirmations/redaction/undo]
+
+  U --> UI --> API --> AGENT --> REG
+  REG --> SHOP
+  REG --> RS
+  REG --> IMG
+
+  API --> DB
+  API --> SAFE
+  SAFE --> REG

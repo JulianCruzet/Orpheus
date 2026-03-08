@@ -8,6 +8,7 @@ import { appendToolExecutionLog } from "@/lib/db/action-log-store";
 import { redactSensitiveData } from "@/lib/security/redact";
 import { executeTool } from "@/lib/tools/registry";
 import { StructuredToolResult } from "@/lib/tools/types";
+import { geminiRespond } from "@/lib/ai/gemini-agent";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -25,20 +26,6 @@ const chatRequestBodySchema = z.object({
 
 type ChatMessage = z.infer<typeof chatMessageSchema>;
 type ChatRequestBody = z.infer<typeof chatRequestBodySchema>;
-
-type MockModelToolCall = {
-  kind: "tool_call";
-  toolName: string;
-  input: Record<string, unknown>;
-  assistantThought: string;
-};
-
-type MockModelFinal = {
-  kind: "final";
-  response: string;
-};
-
-type MockModelStep = MockModelToolCall | MockModelFinal;
 
 const DESTRUCTIVE_TOOLS = new Set([
   "shopify_update_product",
@@ -71,6 +58,14 @@ function buildActionSummary(
       return "about to run market research and summarize trends, pricing bands, and opportunities.";
     case "research_competitors":
       return "about to analyze competitor catalog and pricing/positioning patterns.";
+    case "analyze_store_performance":
+      return "about to analyze store performance metrics and generate insights.";
+    case "generate_product_image":
+      return "about to generate a product image from the given description.";
+    case "shopify_discounts_collections":
+      return "about to manage shopify discounts or collections.";
+    case "draft_customer_response":
+      return "about to draft a customer support response.";
     default:
       return `about to execute ${toolName}.`;
   }
@@ -86,220 +81,6 @@ function requiresConfirmation(toolName: string, input: Record<string, unknown>):
   }
 
   return input.confirmed !== true;
-}
-
-function normalize(input: string): string {
-  return input.toLowerCase().trim();
-}
-
-function chooseToolFromUserPrompt(
-  prompt: string,
-  priorToolCalls: string[],
-): MockModelToolCall | null {
-  const text = normalize(prompt);
-
-  const hasCalled = (toolName: string): boolean =>
-    priorToolCalls.includes(toolName);
-
-  const isMarketingLaunchIntent =
-    text.includes("launch") || text.includes("marketing") || text.includes("discount");
-
-  if (isMarketingLaunchIntent) {
-    if (!hasCalled("generate_product_listing")) {
-      return {
-        kind: "tool_call",
-        toolName: "generate_product_listing",
-        input: { prompt },
-        assistantThought: "i'll generate launch-ready product copy first.",
-      };
-    }
-
-    if (!hasCalled("shopify_discounts_collections")) {
-      return {
-        kind: "tool_call",
-        toolName: "shopify_discounts_collections",
-        input: {
-          action: "create_discount",
-          title: "launch-boost",
-          percentageOff: 10,
-          confirmed: true,
-        },
-        assistantThought: "now i'll create a launch discount to support the campaign.",
-      };
-    }
-
-    return null;
-  }
-
-  const isZeroToStoreIntent =
-    text.includes("zero") ||
-    text.includes("from scratch") ||
-    text.includes("create product") ||
-    text.includes("new product") ||
-    text.includes("start store");
-
-  if (isZeroToStoreIntent) {
-    if (!hasCalled("generate_product_listing")) {
-      return {
-        kind: "tool_call",
-        toolName: "generate_product_listing",
-        input: { prompt },
-        assistantThought: "i'll generate the product copy package first.",
-      };
-    }
-
-    if (!hasCalled("shopify_create_product")) {
-      return {
-        kind: "tool_call",
-        toolName: "shopify_create_product",
-        input: {
-          title: "AI Launch Product",
-          description: "created via shams-e zero-to-store flow",
-          price: 49.99,
-          tags: ["ai", "launch", "demo"],
-          confirmed: true,
-        },
-        assistantThought: "great, now i'll publish that as a new shopify product.",
-      };
-    }
-
-    return null;
-  }
-
-  const isMarketResearchIntent =
-    text.includes("market") ||
-    text.includes("trend") ||
-    text.includes("research") ||
-    text.includes("competitor");
-
-  if (isMarketResearchIntent) {
-    if (!hasCalled("research_market")) {
-      return {
-        kind: "tool_call",
-        toolName: "research_market",
-        input: { query: prompt },
-        assistantThought: "i'll run market research first.",
-      };
-    }
-
-    if (!hasCalled("research_competitors")) {
-      return {
-        kind: "tool_call",
-        toolName: "research_competitors",
-        input: { query: prompt },
-        assistantThought: "next i'll analyze competitor pricing and positioning.",
-      };
-    }
-
-    return null;
-  }
-
-  const isInventoryOrdersIntent =
-    text.includes("inventory") ||
-    text.includes("stock") ||
-    text.includes("restock") ||
-    text.includes("order") ||
-    text.includes("fulfillment");
-
-  if (isInventoryOrdersIntent) {
-    if (!hasCalled("shopify_manage_orders")) {
-      return {
-        kind: "tool_call",
-        toolName: "shopify_manage_orders",
-        input: { action: "list", limit: 10 },
-        assistantThought: "i'll pull your latest orders first.",
-      };
-    }
-
-    if (!hasCalled("shopify_manage_inventory")) {
-      const wantsUpdate =
-        text.includes("update") ||
-        text.includes("confirm") ||
-        text.includes("set") ||
-        text.includes("restock");
-
-      return {
-        kind: "tool_call",
-        toolName: "shopify_manage_inventory",
-        input: wantsUpdate
-          ? {
-              action: "update",
-              inventoryItemId: 1001,
-              locationId: 2001,
-              available: 24,
-              confirmed: text.includes("confirm"),
-            }
-          : {
-              action: "read",
-              inventoryItemId: 1001,
-              locationId: 2001,
-            },
-        assistantThought: wantsUpdate
-          ? "next i'll prepare the inventory update request."
-          : "next i'll fetch the inventory snapshot.",
-      };
-    }
-
-    return null;
-  }
-
-  if (
-    text.includes("list products") ||
-    text.includes("show products") ||
-    text.includes("products")
-  ) {
-    if (hasCalled("shopify_list_products")) {
-      return null;
-    }
-
-    return {
-      kind: "tool_call",
-      toolName: "shopify_list_products",
-      input: { limit: 10 },
-      assistantThought: "i'll check your product catalog first.",
-    };
-  }
-
-  return null;
-}
-
-function getPriorToolCalls(conversation: ChatMessage[]): string[] {
-  return conversation
-    .filter((message) => message.role === "assistant")
-    .map((message) => {
-      if (!message.content.startsWith("tool_call:")) {
-        return null;
-      }
-
-      return message.content.slice("tool_call:".length);
-    })
-    .filter((toolName): toolName is string => Boolean(toolName));
-}
-
-function mockModelRespond(conversation: ChatMessage[]): MockModelStep {
-  const lastUserMessage = [...conversation]
-    .reverse()
-    .find((message) => message.role === "user");
-
-  if (!lastUserMessage) {
-    return {
-      kind: "final",
-      response: "share what you want to do and i'll help.",
-    };
-  }
-
-  const priorToolCalls = getPriorToolCalls(conversation);
-  const toolCall = chooseToolFromUserPrompt(lastUserMessage.content, priorToolCalls);
-
-  if (toolCall) {
-    return toolCall;
-  }
-
-  return {
-    kind: "final",
-    response:
-      "got it. i can help with products, market research, competitors, inventory, and orders once you ask for one of those flows.",
-  };
 }
 
 function asToolMessage(result: StructuredToolResult<unknown>): ChatMessage {
@@ -367,6 +148,13 @@ function mergeMessages(
   return [...fromStore, lastIncoming];
 }
 
+const WRITE_TOOLS = new Set([
+  "shopify_create_product",
+  "shopify_update_product",
+  "shopify_manage_inventory",
+  "shopify_discounts_collections",
+]);
+
 export async function POST(request: NextRequest): Promise<Response> {
   let rawBody: unknown;
 
@@ -420,16 +208,17 @@ export async function POST(request: NextRequest): Promise<Response> {
           ...restoredConversation,
         ];
 
-        const maxIterations = 3;
+        const completedWriteTools: string[] = [];
+        const maxIterations = 5;
 
         for (let iteration = 0; iteration < maxIterations; iteration += 1) {
-          const modelStep = mockModelRespond(workingConversation);
+          const modelStep = await geminiRespond(workingConversation);
 
           if (modelStep.kind === "tool_call") {
             controller.enqueue(
               encoder.encode(
                 toSseEvent("assistant_thought", {
-                  text: modelStep.assistantThought,
+                  text: modelStep.thought,
                 }),
               ),
             );
@@ -502,6 +291,10 @@ export async function POST(request: NextRequest): Promise<Response> {
               result: toolResult,
             });
 
+            if (WRITE_TOOLS.has(modelStep.toolName)) {
+              completedWriteTools.push(modelStep.toolName);
+            }
+
             const redactedToolResult: StructuredToolResult<unknown> = {
               ...toolResult,
               data: redactSensitiveData(toolResult.data),
@@ -524,13 +317,14 @@ export async function POST(request: NextRequest): Promise<Response> {
             continue;
           }
 
+          // Stream tokens
           const tokens = modelStep.response.split(" ");
 
           for (const token of tokens) {
             controller.enqueue(
               encoder.encode(toSseEvent("token", { text: `${token} ` })),
             );
-            await new Promise((resolve) => setTimeout(resolve, 20));
+            await new Promise((resolve) => setTimeout(resolve, 15));
           }
 
           workingConversation.push({
@@ -551,6 +345,7 @@ export async function POST(request: NextRequest): Promise<Response> {
               toSseEvent("done", {
                 status: "complete",
                 conversationId,
+                writtenTools: completedWriteTools,
               }),
             ),
           );
@@ -570,6 +365,7 @@ export async function POST(request: NextRequest): Promise<Response> {
               status: "complete",
               message: "max tool iterations reached",
               conversationId,
+              writtenTools: completedWriteTools,
             }),
           ),
         );

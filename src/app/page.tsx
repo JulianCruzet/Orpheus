@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import {
   ArrowRight,
@@ -13,9 +15,19 @@ import {
   Package,
   ArrowUpRight,
 } from "lucide-react";
-import { ShaderAnimation } from "@/components/ui/shader-animation";
-import { SplineScene } from "@/components/ui/splite";
 import { Spotlight } from "@/components/ui/spotlight";
+import { ShamsELogo } from "@/components/ui/shams-e-logo";
+
+const ShaderAnimation = dynamic(
+  () =>
+    import("@/components/ui/shader-animation").then((m) => m.ShaderAnimation),
+  { ssr: false }
+);
+
+const LazySplineScene = dynamic(
+  () => import("@/components/ui/splite").then((m) => m.SplineScene),
+  { ssr: false, loading: () => <div className="w-full h-full bg-[#080808]" /> }
+);
 
 /* ─────────────── Animation helpers ─────────────── */
 
@@ -50,16 +62,19 @@ function Navbar() {
     <motion.nav
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.8, delay: 0.3 }}
+      transition={{ duration: 0.6, delay: 0.1 }}
       className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-md"
     >
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6">
-        <span
-          className="text-[15px] tracking-[-0.01em] text-[#e8e4de]"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Shams-E
-        </span>
+        <div className="flex items-center gap-3">
+          <ShamsELogo size={22} />
+          <span
+            className="text-[15px] tracking-[-0.01em] text-[#e8e4de]"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Shams-E
+          </span>
+        </div>
 
         <div className="hidden items-center gap-8 md:flex">
           {["Features", "Process", "About"].map((item) => (
@@ -73,12 +88,12 @@ function Navbar() {
           ))}
         </div>
 
-        <a
-          href="#access"
+        <Link
+          href="/auth"
           className="text-[13px] font-light tracking-wide text-[#5EEAD4] transition-colors duration-300 hover:text-[#e8e4de]"
         >
-          Request Access
-        </a>
+          Sign In
+        </Link>
       </div>
     </motion.nav>
   );
@@ -112,7 +127,7 @@ function HeroSection() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.5 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
           className="mb-6 text-[11px] uppercase tracking-[0.35em] text-white/25"
           style={{ fontFamily: "var(--font-mono)" }}
         >
@@ -123,7 +138,7 @@ function HeroSection() {
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
           className="max-w-4xl text-center text-[clamp(3rem,8vw,7.5rem)] leading-[0.95] tracking-[-0.04em] text-[#e8e4de]"
           style={{ fontFamily: "var(--font-display)" }}
         >
@@ -136,7 +151,7 @@ function HeroSection() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.9 }}
+          transition={{ duration: 0.8, delay: 0.35 }}
           className="mt-8 max-w-lg text-center text-[15px] font-light leading-[1.7] text-white/35"
         >
           Describe what you want to sell. Shams-E researches the market, writes
@@ -147,16 +162,16 @@ function HeroSection() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-12 flex items-center gap-6"
         >
-          <a
-            href="#access"
+          <Link
+            href="/auth"
             className="group flex items-center gap-3 border border-white/10 bg-white/[0.03] px-7 py-3.5 text-[13px] font-medium tracking-wide text-[#e8e4de] transition-all duration-300 hover:border-[#5EEAD4]/30 hover:text-[#5EEAD4]"
           >
             Get started
             <ArrowRight className="h-3.5 w-3.5 opacity-40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100" />
-          </a>
+          </Link>
           <span className="text-[13px] font-light text-white/20">
             Free during beta
           </span>
@@ -169,8 +184,11 @@ function HeroSection() {
 /* ─────────────── Spline / Agent section ─────────────── */
 
 function AgentSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(sectionRef, { once: true, margin: "200px" });
+
   return (
-    <section className="relative border-t border-white/[0.06]">
+    <section ref={sectionRef} className="relative border-t border-white/[0.06]">
       <div className="mx-auto max-w-[1200px] px-6 py-24 lg:py-32">
         <div className="relative flex min-h-[520px] flex-col overflow-hidden border border-white/[0.06] bg-[#080808] lg:flex-row">
           <Spotlight
@@ -226,12 +244,16 @@ function AgentSection() {
             </Reveal>
           </div>
 
-          {/* Right — 3D scene */}
+          {/* Right — 3D scene (only loads when section is near viewport) */}
           <div className="relative flex-1">
-            <SplineScene
-              scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-              className="h-full w-full"
-            />
+            {isInView ? (
+              <LazySplineScene
+                scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+                className="h-full w-full"
+              />
+            ) : (
+              <div className="w-full h-full bg-[#080808]" />
+            )}
             <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#080808] to-transparent" />
           </div>
         </div>
@@ -431,17 +453,19 @@ function CTASection() {
 
           <Reveal delay={0.15}>
             <p className="mt-8 max-w-md text-[15px] font-light leading-[1.7] text-white/30">
-              Join the beta. No credit card. No setup. Just tell Shams-E what
-              you want to sell.
+              No credit card. No setup. Just tell Shams-E what you want to sell.
             </p>
           </Reveal>
 
           <Reveal delay={0.3}>
             <div className="mt-12">
-              <button className="group flex items-center gap-3 bg-[#5EEAD4] px-8 py-4 text-[13px] font-medium tracking-wide text-[#050505] transition-all duration-300 hover:bg-[#e8e4de]">
-                Request Early Access
+              <Link
+                href="/auth"
+                className="group inline-flex items-center gap-3 bg-[#5EEAD4] px-8 py-4 text-[13px] font-medium tracking-wide text-[#050505] transition-all duration-300 hover:bg-[#e8e4de]"
+              >
+                Sign In &amp; Launch
                 <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-              </button>
+              </Link>
             </div>
           </Reveal>
         </div>
@@ -456,12 +480,15 @@ function Footer() {
   return (
     <footer className="border-t border-white/[0.06]">
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 px-6 py-8 md:flex-row">
-        <span
-          className="text-[14px] text-white/20"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Shams-E
-        </span>
+        <div className="flex items-center gap-2">
+          <ShamsELogo size={16} className="opacity-30" />
+          <span
+            className="text-[14px] text-white/20"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Shams-E
+          </span>
+        </div>
 
         <div className="flex gap-6">
           {["Twitter", "GitHub", "Discord"].map((s) => (

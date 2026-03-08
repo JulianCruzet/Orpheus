@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as THREE from "three"
 
 export function ShaderAnimation() {
@@ -12,120 +12,141 @@ export function ShaderAnimation() {
     uniforms: any
     animationId: number
   } | null>(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     if (!containerRef.current) return
 
     const container = containerRef.current
+    let cancelled = false
 
-    // Vertex shader
-    const vertexShader = `
-      void main() {
-        gl_Position = vec4( position, 1.0 );
-      }
-    `
+    // Delay WebGL init until hero text animations have finished painting.
+    // WebGLRenderer creation + shader compilation is a synchronous main-thread
+    // block (~200-500ms) that cannot be avoided — so we push it past the point
+    // where the user is already reading the visible text.
+    const initTimer = setTimeout(() => {
+      if (cancelled || !containerRef.current) return
 
-    // Fragment shader
-    const fragmentShader = `
-      #define TWO_PI 6.2831853072
-      #define PI 3.14159265359
+      const vertexShader = `
+        void main() {
+          gl_Position = vec4( position, 1.0 );
+        }
+      `
 
-      precision highp float;
-      uniform vec2 resolution;
-      uniform float time;
+      const fragmentShader = `
+        #define TWO_PI 6.2831853072
+        #define PI 3.14159265359
 
-      void main(void) {
-        vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-        float t = time*0.05;
-        float lineWidth = 0.002;
+        precision highp float;
+        uniform vec2 resolution;
+        uniform float time;
 
-        vec3 color = vec3(0.0);
-        for(int j = 0; j < 3; j++){
-          for(int i=0; i < 5; i++){
-            color[j] += lineWidth*float(i*i) / abs(fract(t - 0.01*float(j)+float(i)*0.01)*5.0 - length(uv) + mod(uv.x+uv.y, 0.2));
+        void main(void) {
+          vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          float t = time*0.05;
+          float lineWidth = 0.002;
+
+          vec3 color = vec3(0.0);
+          for(int j = 0; j < 3; j++){
+            for(int i=0; i < 5; i++){
+              color[j] += lineWidth*float(i*i) / abs(fract(t - 0.01*float(j)+float(i)*0.01)*5.0 - length(uv) + mod(uv.x+uv.y, 0.2));
+            }
           }
+
+          gl_FragColor = vec4(color[0],color[1],color[2],1.0);
         }
+      `
 
-        gl_FragColor = vec4(color[0],color[1],color[2],1.0);
+      const camera = new THREE.Camera()
+      camera.position.z = 1
+
+      const scene = new THREE.Scene()
+      const geometry = new THREE.PlaneGeometry(2, 2)
+
+      const uniforms = {
+        time: { type: "f", value: 1.0 },
+        resolution: { type: "v2", value: new THREE.Vector2() },
       }
-    `
 
-    // Initialize Three.js scene
-    const camera = new THREE.Camera()
-    camera.position.z = 1
+      const material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+      })
 
-    const scene = new THREE.Scene()
-    const geometry = new THREE.PlaneGeometry(2, 2)
+      const mesh = new THREE.Mesh(geometry, material)
+      scene.add(mesh)
 
-    const uniforms = {
-      time: { type: "f", value: 1.0 },
-      resolution: { type: "v2", value: new THREE.Vector2() },
-    }
+      const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "low-power" })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 
-    const material = new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-    })
+      container.appendChild(renderer.domElement)
 
-    const mesh = new THREE.Mesh(geometry, material)
-    scene.add(mesh)
+      const onWindowResize = () => {
+        const width = container.clientWidth
+        const height = container.clientHeight
+        renderer.setSize(width, height)
+        uniforms.resolution.value.x = renderer.domElement.width
+        uniforms.resolution.value.y = renderer.domElement.height
+      }
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
+      let resizeTimer: ReturnType<typeof setTimeout>
+      const debouncedResize = () => {
+        clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(onWindowResize, 150)
+      }
 
-    container.appendChild(renderer.domElement)
+      onWindowResize()
+      window.addEventListener("resize", debouncedResize, false)
 
-    // Handle window resize
-    const onWindowResize = () => {
-      const width = container.clientWidth
-      const height = container.clientHeight
-      renderer.setSize(width, height)
-      uniforms.resolution.value.x = renderer.domElement.width
-      uniforms.resolution.value.y = renderer.domElement.height
-    }
+      sceneRef.current = {
+        camera,
+        scene,
+        renderer,
+        uniforms,
+        animationId: 0,
+      }
 
-    // Initial resize
-    onWindowResize()
-    window.addEventListener("resize", onWindowResize, false)
-
-    // Animation loop
-    const animate = () => {
-      const animationId = requestAnimationFrame(animate)
-      uniforms.time.value += 0.05
+      // Render one frame, then signal ready so the canvas fades in
       renderer.render(scene, camera)
+      setReady(true)
 
-      if (sceneRef.current) {
-        sceneRef.current.animationId = animationId
-      }
-    }
+      const animate = () => {
+        const animationId = requestAnimationFrame(animate)
+        uniforms.time.value += 0.05
+        renderer.render(scene, camera)
 
-    // Store scene references for cleanup
-    sceneRef.current = {
-      camera,
-      scene,
-      renderer,
-      uniforms,
-      animationId: 0,
-    }
-
-    // Start animation
-    animate()
-
-    // Cleanup function
-    return () => {
-      window.removeEventListener("resize", onWindowResize)
-
-      if (sceneRef.current) {
-        cancelAnimationFrame(sceneRef.current.animationId)
-
-        if (container && sceneRef.current.renderer.domElement) {
-          container.removeChild(sceneRef.current.renderer.domElement)
+        if (sceneRef.current) {
+          sceneRef.current.animationId = animationId
         }
+      }
 
-        sceneRef.current.renderer.dispose()
-        geometry.dispose()
-        material.dispose()
+      animate()
+
+      // Store cleanup references on the container for the effect teardown
+      ;(container as any).__shaderCleanup = () => {
+        clearTimeout(resizeTimer)
+        window.removeEventListener("resize", debouncedResize)
+
+        if (sceneRef.current) {
+          cancelAnimationFrame(sceneRef.current.animationId)
+
+          if (container && sceneRef.current.renderer.domElement) {
+            container.removeChild(sceneRef.current.renderer.domElement)
+          }
+
+          sceneRef.current.renderer.dispose()
+          geometry.dispose()
+          material.dispose()
+        }
+      }
+    }, 1500)
+
+    return () => {
+      cancelled = true
+      clearTimeout(initTimer)
+      if ((container as any).__shaderCleanup) {
+        ;(container as any).__shaderCleanup()
       }
     }
   }, [])
@@ -137,6 +158,8 @@ export function ShaderAnimation() {
       style={{
         background: "#000",
         overflow: "hidden",
+        opacity: ready ? 1 : 0,
+        transition: "opacity 0.8s ease-out",
       }}
     />
   )

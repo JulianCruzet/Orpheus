@@ -1,167 +1,22 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { DashboardPanel } from "@/components/chat/dashboard-panel";
+import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { ShamsELogo } from "@/components/ui/shams-e-logo";
 
-type ToolEventStatus = "pending" | "success" | "error";
-
-type ChatBubble = {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-};
-
-type ToolEvent = {
-  id: string;
-  toolName: string;
-  status: ToolEventStatus;
-  summary: string;
-  timestamp: string;
-};
-
-type RichBlockType =
-  | "product_card"
-  | "market_research_summary"
-  | "action_confirmation";
-
-type RichBlock = {
-  id: string;
-  type: RichBlockType;
-  title: string;
-  body: string;
-  meta?: string;
-};
-
-const quickPrompts = [
-  "list products with low inventory",
-  "research market trends for reusable water bottles",
-  "analyze competitor pricing for bluetooth speakers",
-  "draft a product listing for a minimalist desk lamp",
-  "confirm inventory update for sku-wb-102",
-];
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function getToolEventStyle(status: ToolEventStatus): string {
-  if (status === "pending") {
-    return "border-amber-300/40 bg-amber-400/10 text-amber-100";
-  }
-
-  if (status === "error") {
-    return "border-rose-300/40 bg-rose-400/10 text-rose-100";
-  }
-
-  return "border-emerald-300/40 bg-emerald-400/10 text-emerald-100";
-}
-
-function getRichBlockStyle(type: RichBlockType): string {
-  if (type === "product_card") {
-    return "border-cyan-300/40 bg-cyan-400/10 text-cyan-100";
-  }
-
-  if (type === "market_research_summary") {
-    return "border-violet-300/40 bg-violet-400/10 text-violet-100";
-  }
-
-  return "border-emerald-300/40 bg-emerald-400/10 text-emerald-100";
-}
-
-function getRichBlockMeta(type: RichBlockType): {
-  label: string;
-  icon: string;
-  chipClass: string;
-} {
-  if (type === "product_card") {
-    return {
-      label: "product preview",
-      icon: "◈",
-      chipClass: "border-cyan-200/30 bg-cyan-300/10 text-cyan-100/90",
-    };
-  }
-
-  if (type === "market_research_summary") {
-    return {
-      label: "market insight",
-      icon: "◉",
-      chipClass: "border-violet-200/30 bg-violet-300/10 text-violet-100/90",
-    };
-  }
-
-  return {
-    label: "action confirmation",
-    icon: "✓",
-    chipClass: "border-emerald-200/30 bg-emerald-300/10 text-emerald-100/90",
-  };
-}
-
-function buildRichBlocks(text: string, baseId: number): RichBlock[] {
-  const lowerText = text.toLowerCase();
-
-  if (lowerText.includes("list") || lowerText.includes("product")) {
-    return [
-      {
-        id: `rich-product-${baseId}`,
-        type: "product_card",
-        title: "minimalist desk lamp",
-        body: "$39.99 • inventory: 12 • status: active",
-        meta: "shopify product preview",
-      },
-    ];
-  }
-
-  if (lowerText.includes("research") || lowerText.includes("competitor")) {
-    return [
-      {
-        id: `rich-market-${baseId}`,
-        type: "market_research_summary",
-        title: "market snapshot",
-        body: "avg competitor price: $34-$49 • trend: compact eco products rising",
-        meta: "opportunity score: 8.2/10",
-      },
-    ];
-  }
-
-  if (lowerText.includes("confirm") || lowerText.includes("update")) {
-    return [
-      {
-        id: `rich-confirm-${baseId}`,
-        type: "action_confirmation",
-        title: "action confirmed",
-        body: "inventory updated successfully for sku-wb-102.",
-        meta: "applied at checkout location toronto warehouse",
-      },
-    ];
-  }
-
-  return [];
-}
-
-export default function ChatDemoPage() {
+export default function ChatPage() {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<ChatBubble[]>([
-    {
-      id: "intro",
-      role: "assistant",
-      content:
-        "hey! ask me to list products, draft a product listing, or review your inventory.",
-    },
-  ]);
-  const [events, setEvents] = useState<ToolEvent[]>([]);
-  const [richBlocks, setRichBlocks] = useState<RichBlock[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [dashboardVersion, setDashboardVersion] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -193,110 +48,26 @@ export default function ChatDemoPage() {
     };
   }, [router, supabase]);
 
-  const canSend = draft.trim().length > 0;
+  const handleDashboardRefresh = useCallback(() => {
+    setDashboardVersion((v) => v + 1);
+  }, []);
 
-  const helperText = useMemo(() => {
-    if (isProcessing) {
-      return "processing request... tool states and rich blocks are updating.";
-    }
-
-    if (canSend) {
-      return "ready to send. this now previews pending/success/error tool activity and rich result blocks.";
-    }
-
-    return "pick a quick prompt or type a message to start the demo.";
-  }, [canSend, isProcessing]);
-
-  const lastEvent = events[0] ?? null;
-  const hasRecentError = lastEvent?.status === "error";
-
-  function handleQuickPromptClick(prompt: string): void {
-    setDraft(prompt);
-  }
-
-  function handleRecoveryPrompt(): void {
-    setDraft("list products with low inventory");
-  }
-
-  async function handleSignOut(): Promise<void> {
+  async function handleSignOut() {
     await supabase.auth.signOut();
     router.replace("/auth");
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-
-    const text = draft.trim();
-    if (!text || isProcessing) {
-      return;
-    }
-
-    const now = new Date();
-    const baseId = Date.now();
-
-    const userMessage: ChatBubble = {
-      id: `user-${baseId}`,
-      role: "user",
-      content: text,
-    };
-
-    const pendingEvent: ToolEvent = {
-      id: `tool-pending-${baseId}`,
-      toolName: "agent_router",
-      status: "pending",
-      summary: "routing request to tool chain...",
-      timestamp: formatTime(now),
-    };
-
-    const statusFromPrompt: ToolEventStatus = text.includes("error")
-      ? "error"
-      : "success";
-
-    const resultEvent: ToolEvent = {
-      id: `tool-result-${baseId}`,
-      toolName: "agent_router",
-      status: statusFromPrompt,
-      summary:
-        statusFromPrompt === "error"
-          ? "tool run failed. showing fallback response."
-          : "tool run finished. structured response ready.",
-      timestamp: formatTime(new Date(now.getTime() + 1500)),
-    };
-
-    const assistantMessage: ChatBubble = {
-      id: `assistant-${baseId}`,
-      role: "assistant",
-      content:
-        statusFromPrompt === "error"
-          ? "i hit a tool error in this demo run. try another prompt and i'll retry."
-          : "done! tool activity is now rendering with live status states and rich result blocks.",
-    };
-
-    const nextRichBlocks =
-      statusFromPrompt === "error" ? [] : buildRichBlocks(text, baseId);
-
-    setIsProcessing(true);
-    setMessages((prev) => [...prev, userMessage]);
-    setEvents((prev) => [pendingEvent, ...prev].slice(0, 8));
-    setDraft("");
-
-    await new Promise((resolve) => setTimeout(resolve, 700));
-
-    setMessages((prev) => [...prev, assistantMessage]);
-    setEvents((prev) => [resultEvent, ...prev].slice(0, 8));
-    setRichBlocks((prev) => [...nextRichBlocks, ...prev].slice(0, 6));
-    setIsProcessing(false);
-  }
-
   if (authLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#05070f] text-white">
+      <main className="flex h-screen items-center justify-center bg-[#050505] text-white">
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-3"
         >
-          checking authentication...
+          <div className="h-4 w-4 rounded-full border border-[#5EEAD4]/40 border-t-[#5EEAD4] animate-spin" />
+          <span className="text-sm text-white/60">Authenticating...</span>
         </motion.div>
       </main>
     );
@@ -307,210 +78,61 @@ export default function ChatDemoPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#05070f] text-white">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8 lg:flex-row">
-        <section className="flex min-h-[68vh] flex-1 flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:min-h-[70vh] sm:p-4">
-          <header className="mb-5 border-b border-white/10 pb-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-cyan-300/90">
-                  shams-e demo
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[30px]">agent chat</h1>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">
-                  prototype surface for tool-driven commerce conversations.
-                </p>
-              </div>
-
-              <div className="space-y-1 text-left sm:text-right">
-                <p className="text-[11px] text-white/55">{session.user.email}</p>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="mt-2 min-h-10 rounded-lg border border-white/20 px-3 py-2 text-xs text-white/80 transition hover:border-cyan-300/50 hover:text-cyan-100"
-                >
-                  sign out
-                </button>
-              </div>
-            </div>
-          </header>
-
-          <div className="mb-4">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
-              quick actions
-            </p>
-            <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-              {quickPrompts.map((prompt) => (
-                <motion.button
-                  key={prompt}
-                  type="button"
-                  onClick={() => handleQuickPromptClick(prompt)}
-                  disabled={isProcessing}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.15 }}
-                  className="min-h-10 shrink-0 snap-start rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-55 sm:min-h-0 sm:py-1.5"
-                >
-                  {prompt}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          <p aria-live="polite" className="mb-3 text-xs leading-5 text-white/55">{helperText}</p>
-
-          {hasRecentError ? (
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-rose-300/35 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
-              <p>last run hit an error. try a safe prompt to recover quickly.</p>
-              <button
-                type="button"
-                onClick={handleRecoveryPrompt}
-                className="rounded-md border border-rose-200/40 px-2 py-1 text-[11px] uppercase tracking-[0.08em] hover:bg-rose-300/20"
-              >
-                use recovery prompt
-              </button>
-            </div>
-          ) : null}
-
-          <div className="flex-1 space-y-3 overflow-auto pr-1">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">conversation</p>
-
-            {messages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`max-w-[92%] rounded-xl px-4 py-3 text-sm sm:max-w-[80%] ${
-                  message.role === "assistant"
-                    ? "border border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
-                    : "ml-auto border border-white/20 bg-[#0b1220] text-white"
-                }`}
-              >
-                <p className="mb-1 text-[10px] uppercase tracking-[0.12em] opacity-60">
-                  {message.role === "assistant" ? "assistant" : "you"}
-                </p>
-                <p className="leading-6">{message.content}</p>
-              </motion.div>
-            ))}
-
-            {isProcessing ? (
-              <div className="max-w-[85%] animate-pulse rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100/80 sm:max-w-[70%]">
-                <p className="mb-1 text-[10px] uppercase tracking-[0.12em] opacity-60">assistant</p>
-                <p>assistant is thinking...</p>
-              </div>
-            ) : null}
-          </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="sticky bottom-0 mt-4 flex items-center gap-2 border-t border-white/10 bg-[#05070f]/85 pt-3 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:bg-transparent sm:pb-0"
+    <main style={{ height: "100dvh" }} className="flex flex-col bg-[#050505] text-[#e8e4de] overflow-hidden">
+      {/* Top Bar */}
+      <motion.header
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+        className="relative z-20 flex h-12 shrink-0 items-center justify-between border-b border-white/[0.06] px-5"
+      >
+        <div className="flex items-center gap-3">
+          <ShamsELogo size={20} />
+          <span
+            className="text-[14px] tracking-[-0.01em]"
+            style={{ fontFamily: "var(--font-display)" }}
           >
-            <input
-              type="text"
-              placeholder="message the shams-e agent..."
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              disabled={isProcessing}
-              className="h-12 flex-1 rounded-xl border border-white/15 bg-[#0b1220] px-4 text-sm outline-none placeholder:text-white/40 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-60 sm:h-11"
-            />
-            <button
-              type="submit"
-              className="h-12 rounded-xl bg-cyan-400 px-4 text-sm font-medium text-[#041018] disabled:opacity-60 sm:h-11"
-              disabled={!canSend || isProcessing}
-            >
-              {isProcessing ? "sending..." : "send"}
-            </button>
-          </form>
-        </section>
+            Shams-E
+          </span>
+          <div className="hidden h-4 w-px bg-white/10 sm:block" />
+          <span
+            className="hidden text-[10px] tracking-[0.12em] text-white/25 sm:block"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            WORKSPACE
+          </span>
+        </div>
 
-        <aside className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4 lg:w-96">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
-            activity panel
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-white/70">
-            assistant/tool execution states and rich blocks render below.
-          </p>
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] text-white/35">{session.user.email}</span>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-white/40 transition hover:border-white/20 hover:text-white/70"
+          >
+            Sign Out
+          </button>
+        </div>
+      </motion.header>
 
-          <div className="mt-4 space-y-2">
-            {events.length === 0 ? (
-              <p className="text-sm text-white/50">
-                no tool events yet. send a prompt to see pending/success/error.
-              </p>
-            ) : (
-              events.map((item) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`rounded-xl border px-3 py-2 text-sm ${getToolEventStyle(
-                    item.status,
-                  )}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] uppercase tracking-[0.14em] opacity-80">
-                      {item.toolName}
-                    </span>
-                    <span className="rounded-full border border-current/35 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]">
-                      {item.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm font-medium">{item.summary}</p>
-                  <p className="mt-1 text-[11px] opacity-70">updated {item.timestamp}</p>
-                </motion.div>
-              ))
-            )}
+      {/* Body: Dashboard + Chat Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Dashboard */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="flex-1 overflow-hidden"
+        >
+          <DashboardPanel dashboardVersion={dashboardVersion} />
+        </motion.section>
 
-            {isProcessing ? (
-              <div className="animate-pulse rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs uppercase tracking-[0.12em] text-amber-100">
-                syncing tool states...
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
-            <h3 className="text-xs uppercase tracking-[0.14em] text-white/60">
-              rich result blocks
-            </h3>
-            {richBlocks.length === 0 ? (
-              <p className="text-sm text-white/50">
-                no rich blocks yet. try prompts about products, research, or confirmation.
-              </p>
-            ) : (
-              richBlocks.map((block) => {
-                const meta = getRichBlockMeta(block.type);
-
-                return (
-                  <motion.div
-                    key={block.id}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.18 }}
-                    className={`rounded-xl border px-3 py-3 ${getRichBlockStyle(
-                      block.type,
-                    )}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${meta.chipClass}`}
-                      >
-                        {meta.label}
-                      </span>
-                      <span className="text-xs opacity-80">{meta.icon}</span>
-                    </div>
-
-                    <p className="mt-2 text-sm font-semibold leading-5">{block.title}</p>
-                    <p className="mt-1 text-sm leading-5 opacity-95">{block.body}</p>
-                    {block.meta ? (
-                      <p className="mt-2 text-[11px] uppercase tracking-[0.1em] opacity-70">{block.meta}</p>
-                    ) : null}
-                  </motion.div>
-                );
-              })
-            )}
-          </div>
-        </aside>
+        {/* Chat Sidebar */}
+        <ChatSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((c) => !c)}
+          onDashboardRefresh={handleDashboardRefresh}
+        />
       </div>
     </main>
   );
