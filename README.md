@@ -1,91 +1,110 @@
-# shams-e
+# <img src="https://img.shields.io/badge/-%E2%97%BC-5EEAD4?style=flat-square" alt="" height="20"/> Shams-E
 
-ai commerce co-pilot for shopify workflows. shams-e combines conversational planning with tool-based actions so a demo user can go from idea to store changes quickly.
+**AI-Powered E-Commerce Copilot for Shopify**
 
-## current status (mvp in progress)
-- frontend: next.js app router shell is live
-- backend/api: pending `/api/chat` agent loop implementation
-- integrations: shopify + research tools are planned in `TODO.md`
-- fallback: mock mode planned for demo reliability
+Tell Shams-E what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.
 
-## tech stack
-- next.js 15 + react 19 + typescript
-- tailwind + shadcn/ui
-- node runtime (npm)
+## Features
 
-## repository structure
-- `src/app/` - app routes and ui pages
-- `src/components/` - reusable ui components
-- `src/lib/` - shared utilities and (planned) tool registry + clients
-- `public/` - static assets
-- `PRD/` - product planning docs
-- `TODO.md` - implementation checklist and sprint priorities
+- **Gemini AI Agent** — Powered by Gemini 2.5 Flash with function-calling across 12 tools
+- **Cursor-Style Dashboard** — Split layout with live store dashboard (left) and AI chat sidebar (right)
+- **Product Management** — List, create, and update Shopify products through natural language
+- **Market Research** — Analyze trends, pricing bands, and competitor positioning
+- **Store Analytics** — Health score, revenue tracking, conversion rates, and AI-generated insights
+- **Inventory & Orders** — Monitor stock levels, view orders, manage fulfillment
+- **Discounts & Collections** — Create discount codes and organize collections
+- **Product Listing Generation** — AI-generated titles, descriptions, tags, SEO metadata, and pricing suggestions
+- **Mock Mode** — Full demo flow with seeded data when Shopify credentials aren't available
 
-## environment setup
-1) install dependencies
-- `npm install`
+## Tech Stack
 
-2) create env file
-- copy `.env.example` to `.env`
-- fill required keys (at minimum, model provider key; shopify keys when testing real store actions)
+- **Framework:** Next.js 16 (App Router) + TypeScript
+- **AI:** Google Gemini 2.5 Flash (function-calling)
+- **Auth:** Supabase Auth (email/password + magic link)
+- **Styling:** Tailwind CSS v4 + shadcn/ui
+- **Animation:** Framer Motion, Three.js (WebGL shaders), Spline (3D)
+- **Deployment:** Vercel
 
-3) confirm scripts
-- `npm run dev` for local development
-- `npm run build` for production build check
-- `npm run lint` for static checks
+## Getting Started
 
-## local run flows
+### Prerequisites
 
-### frontend (default)
-- start app: `npm run dev`
-- open: `http://localhost:3000`
+- Node.js 18+
+- npm
 
-### api (once `/api/chat` lands)
-- the api route will be served by next.js on the same dev server
-- endpoint target: `POST /api/chat`
-- planned behavior: stream assistant output + tool events to chat ui
+### Installation
 
-### mock mode (planned reliability path)
-- set `MOCK_MODE=true` in `.env`
-- expected behavior:
-  - bypass live shopify write calls
-  - return deterministic seeded products/orders/inventory
-  - keep demo flow working if external APIs fail
+```bash
+npm install
+```
 
-## architecture snapshot (target)
-1. user sends message in `/app/chat`
-2. ui posts conversation to `/api/chat`
-3. api runs agent loop:
-   - system prompt + history -> model
-   - model tool calls -> tool registry handlers
-   - handler results -> model continuation
-4. api streams assistant text + structured tool events back to ui
-5. ui renders:
-   - assistant messages
-   - pending/success/error tool states
-   - rich blocks (product cards, research summaries, confirmations)
+### Environment Setup
 
-## demo script (target)
-- flow 1: zero-to-store product creation
-- flow 2: market intelligence summary
-- flow 3: inventory/orders checks
-- flow 4: light marketing launch support
+Copy `.env.example` to `.env` and fill in the required keys:
 
-## sprint workflow
-- base branch: `development`
-- create focused feature branches from `development`
-- open PRs back into `development` with small, reviewable scope
-- keep commit messages explicit (`feat: ...`, `fix: ...`, `docs: ...`)
-- do not merge to `main` during active sprint without explicit approval
+```bash
+GEMINI_API_KEY=your_gemini_api_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+MOCK_MODE=true
+```
 
-## quick troubleshooting
-- app fails to start:
-  - run `npm install` again
-  - verify node version supports next 15
-- env key errors:
-  - re-check `.env` against `.env.example`
-- flaky external APIs during demo:
-  - switch to `MOCK_MODE=true`
+Set `MOCK_MODE=true` to run with seeded demo data (no Shopify credentials needed).
 
-## next high-impact tasks
-see `TODO.md` for the authoritative checklist and build order.
+### Development
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the landing page, or sign in to access the dashboard at `/chat`.
+
+### Build
+
+```bash
+npm run build
+```
+
+## Project Structure
+
+```
+src/
+  app/
+    page.tsx                  # Landing page (WebGL shader hero + Spline 3D)
+    auth/page.tsx             # Authentication (sign in / sign up / magic link)
+    chat/page.tsx             # Dashboard + AI chat sidebar
+    api/chat/route.ts         # SSE streaming chat endpoint (Gemini agent loop)
+    api/dashboard/route.ts    # Dashboard data endpoint
+  components/
+    chat/
+      dashboard-panel.tsx     # Store dashboard with metrics, products, orders
+      chat-sidebar.tsx        # AI chat with SSE streaming + tool activity
+    ui/
+      shams-e-logo.tsx        # Brand logo SVG component
+      shader-animation.tsx    # WebGL ring shader
+      spotlight.tsx           # SVG spotlight effect
+  lib/
+    ai/
+      gemini-agent.ts         # Gemini function-calling orchestrator + fallback
+      tool-schemas.ts         # JSON Schema definitions for all 12 tools
+    tools/
+      registry.ts             # Tool registry and execution engine
+      mock-tools.ts           # Mock mode handlers with seeded data
+      ...                     # Individual tool implementations
+    db/                       # Conversation and action log persistence
+    security/                 # Input redaction utilities
+    supabase/                 # Supabase client configuration
+```
+
+## Architecture
+
+1. User sends a message in the chat sidebar
+2. Frontend POSTs conversation to `/api/chat`
+3. API runs the Gemini agent loop:
+   - Conversation history + system prompt sent to Gemini 2.5 Flash
+   - Gemini decides to call a tool or respond directly
+   - Tool results are fed back for continuation (up to 5 iterations)
+4. API streams SSE events back: `token`, `tool_call`, `tool_result`, `done`
+5. Frontend renders streamed text, tool activity pills, and refreshes dashboard on write operations
