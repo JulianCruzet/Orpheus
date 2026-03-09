@@ -9,6 +9,8 @@ export interface ShopifyCreateProductInput {
   tags?: string[];
   price?: number;
   status?: "active" | "draft" | "archived";
+  imageUrls?: string[];
+  imageAttachments?: Array<{ base64Data: string; mimeType: string; filename?: string }>;
 }
 
 export interface ShopifyCreatedProduct {
@@ -96,15 +98,26 @@ async function createProduct(
       vendor: input.vendor,
       product_type: input.productType,
       tags: normalizeTags(input.tags),
-      status: input.status ?? "draft",
+      status: input.status ?? "active",
       variants:
         input.price !== undefined
-          ? [
-              {
-                price: input.price.toFixed(2),
-              },
-            ]
+          ? [{ price: input.price.toFixed(2) }]
           : undefined,
+      images: [
+        ...(input.imageUrls ?? []).map((src) => ({ src })),
+        ...(input.imageAttachments ?? []).map((att, i) => ({
+          attachment: att.base64Data,
+          filename: att.filename ?? `product-image-${i + 1}.${att.mimeType.split("/")[1] ?? "png"}`,
+        })),
+      ].length > 0
+        ? [
+            ...(input.imageUrls ?? []).map((src) => ({ src })),
+            ...(input.imageAttachments ?? []).map((att, i) => ({
+              attachment: att.base64Data,
+              filename: att.filename ?? `product-image-${i + 1}.${att.mimeType.split("/")[1] ?? "png"}`,
+            })),
+          ]
+        : undefined,
     },
   };
 
@@ -119,7 +132,7 @@ async function createProduct(
   return {
     id: response.product.id,
     title: response.product.title,
-    status: response.product.status ?? input.status ?? "draft",
+    status: response.product.status ?? input.status ?? "active",
     handle: response.product.handle ?? "",
     vendor: response.product.vendor ?? input.vendor ?? "",
   };
@@ -129,7 +142,7 @@ function mockCreatedProduct(input: ShopifyCreateProductInput): ShopifyCreatedPro
   return {
     id: Math.floor(Math.random() * 900000) + 100000,
     title: input.title.trim(),
-    status: input.status ?? "draft",
+    status: input.status ?? "active",
     handle: input.title.trim().toLowerCase().replace(/\s+/g, "-"),
     vendor: input.vendor ?? "Shams-E",
   };

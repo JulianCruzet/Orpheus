@@ -142,7 +142,7 @@ function buildContents(conversation: ChatMessage[]): Content[] {
 export async function geminiRespond(
   conversation: ChatMessage[],
 ): Promise<AgentStep> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     console.warn("[gemini-agent] No GEMINI_API_KEY, falling back to keyword router");

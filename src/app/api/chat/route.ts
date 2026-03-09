@@ -66,6 +66,8 @@ function buildActionSummary(
       return "about to manage shopify discounts or collections.";
     case "draft_customer_response":
       return "about to draft a customer support response.";
+    case "generate_marketing_copy":
+      return "about to generate marketing copy (instagram, email, facebook ad, twitter).";
     default:
       return `about to execute ${toolName}.`;
   }
@@ -83,10 +85,28 @@ function requiresConfirmation(toolName: string, input: Record<string, unknown>):
   return input.confirmed !== true;
 }
 
+// Strip large binary fields before adding tool results to conversation history
+// to avoid exceeding Gemini's token limit.
+function stripBinaryData(data: unknown): unknown {
+  if (!data || typeof data !== "object") return data;
+  if (Array.isArray(data)) return data.map(stripBinaryData);
+  const obj = data as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (key === "base64Data" || key === "imageUrl" || key === "attachment") {
+      result[key] = "[binary omitted]";
+    } else {
+      result[key] = stripBinaryData(val);
+    }
+  }
+  return result;
+}
+
 function asToolMessage(result: StructuredToolResult<unknown>): ChatMessage {
+  const stripped = { ...result, data: stripBinaryData(result.data) };
   return {
     role: "tool",
-    content: JSON.stringify(result),
+    content: JSON.stringify(stripped),
   };
 }
 
@@ -197,8 +217,20 @@ export async function POST(request: NextRequest): Promise<Response> {
 
         const systemPrompt: ChatMessage = {
           role: "system",
-          content:
-            "you are shams-e, an ecommerce copilot. decide whether to call a tool or answer directly.",
+          content: [
+            "you are shams-e, an ecommerce copilot. be action-first: when you have enough information to call a tool, call it immediately — do not re-explain or ask for confirmation unless the action is destructive.",
+            "follow-through rule: if you asked the user a question and they answered it, call the relevant tool immediately. never ignore a direct answer to your own question.",
+            "product lookup rule: shopify_update_product and shopify_manage_inventory require a numeric productId. if the user refers to a product by name (e.g. 'the mug', 'sunset tee'), first call shopify_list_products to find its ID, then immediately call the update/inventory tool with that ID. do not ask the user for the ID.",
+            "upload to shopify rule: when the user says 'upload to shopify', 'add to shopify', or 'put it on shopify' — they want shopify_create_product called with the product details you already know. if you need a price, ask once then act immediately on their answer.",
+            "tool selection rules:",
+            "- generate_product_image: logos and artwork only.",
+            "- printify_generate_mockups: physical products (t-shirt, mug, hoodie, etc.). chain after generate_product_image if artwork is needed.",
+            "- shopify_create_product: create a new shopify listing. always pass status='active'. description generation rule: ALWAYS call generate_product_listing first to get a professional title, description, and tags — even if the user gave a description. pass the generate_product_listing output as descriptionHtml and tags into shopify_create_product.",
+            "- shopify_update_product: change price, title, description, or tags. requires productId — look it up first if not known.",
+            "- shopify_manage_inventory: read or update stock levels.",
+            "- generate_marketing_copy: captions, email campaigns, ads, promotional content.",
+            "keep responses concise and lowercase. never show a generic help menu unless the user explicitly asks what you can do.",
+          ].join(" "),
         };
 
         const restoredConversation = mergeMessages(existingMessages, body.messages);

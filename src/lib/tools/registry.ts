@@ -18,6 +18,8 @@ import { generateProductImage } from "@/lib/tools/generate-product-image";
 import { shopifyDiscountsAndCollections } from "@/lib/tools/shopify-discounts-collections";
 import { analyzeStorePerformance } from "@/lib/tools/analyze-store-performance";
 import { draftCustomerResponse } from "@/lib/tools/draft-customer-response";
+import { printifyGenerateMockups } from "@/lib/tools/printify-generate-mockups";
+import { generateMarketingCopy } from "@/lib/tools/generate-marketing-copy";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -41,6 +43,7 @@ function withToolLogging<TInput = unknown, TOutput = unknown>(
         durationMs,
         startedAt,
         finishedAt,
+        ...(result.status === "error" && { error: result.error }),
       });
 
       return {
@@ -151,6 +154,19 @@ export const toolRegistry: ToolRegistry = {
       "draft_customer_response",
       draftCustomerResponse,
     ),
+  },
+  printify_generate_mockups: {
+    name: "printify_generate_mockups",
+    description: "Upload artwork to Printify and generate product mockup images.",
+    handler: withToolLogging(
+      "printify_generate_mockups",
+      printifyGenerateMockups,
+    ),
+  },
+  generate_marketing_copy: {
+    name: "generate_marketing_copy",
+    description: "Generate marketing copy (Instagram, email, Facebook ad, Twitter) for a product.",
+    handler: withToolLogging("generate_marketing_copy", generateMarketingCopy),
   },
 };
 

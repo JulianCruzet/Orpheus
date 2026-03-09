@@ -126,7 +126,7 @@ function parseGeminiJson(text: string): DraftCustomerResponseOutput | null {
 async function generateWithGemini(
   input: DraftCustomerResponseInput,
 ): Promise<DraftCustomerResponseOutput> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY.");
@@ -150,7 +150,7 @@ async function generateWithGemini(
   ].join("\n");
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: {

@@ -21,21 +21,23 @@ export const toolFunctionDeclarations: any[] = [
   {
     name: "shopify_create_product",
     description:
-      "Create a new product in Shopify. Use after generating listing copy.",
+      "Create a new product in Shopify. Always set status to 'active' so it is immediately live. Always include price and description.",
     parameters: {
       type: "OBJECT",
       properties: {
         title: { type: "STRING", description: "Product title." },
-        description: { type: "STRING", description: "Product description." },
-        price: { type: "NUMBER", description: "Price in dollars." },
+        description: { type: "STRING", description: "Product description (HTML allowed). Generate one if not provided by the user." },
+        price: { type: "NUMBER", description: "Price in dollars. Ask the user if not known." },
+        status: { type: "STRING", description: "Product status. Always pass 'active' to publish immediately." },
         tags: {
           type: "ARRAY",
           items: { type: "STRING" },
           description: "Product tags.",
         },
-        confirmed: {
-          type: "BOOLEAN",
-          description: "Set true to confirm creation.",
+        imageUrls: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Image URLs to attach. Pass the imageUrl from generate_product_image or mockupUrls from printify_generate_mockups.",
         },
       },
       required: ["title", "price"],
@@ -67,7 +69,7 @@ export const toolFunctionDeclarations: any[] = [
   {
     name: "shopify_manage_inventory",
     description:
-      "Read or update inventory levels for a product. Action can be 'read' or 'update'.",
+      "Read or update inventory levels for a product. Location ID is auto-fetched if not provided. Pass productId (from shopify_list_products) to auto-resolve the inventory item.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -75,17 +77,28 @@ export const toolFunctionDeclarations: any[] = [
           type: "STRING",
           description: "Either 'read' or 'update'.",
         },
-        inventoryItemId: { type: "NUMBER", description: "Inventory item ID." },
-        locationId: { type: "NUMBER", description: "Location ID." },
+        productId: {
+          type: "NUMBER",
+          description: "Shopify product ID (numeric). Pass this to auto-resolve the inventory item.",
+        },
+        inventoryItemId: {
+          type: "NUMBER",
+          description: "Inventory item ID. Use productId instead if you don't have this.",
+        },
+        locationId: {
+          type: "NUMBER",
+          description: "Location ID. Omit to auto-use the store's first active location.",
+        },
         available: {
           type: "NUMBER",
-          description: "New available count (for update).",
+          description: "New available stock count (required for action='update').",
         },
         confirmed: {
           type: "BOOLEAN",
           description: "Set true to confirm inventory update.",
         },
       },
+      required: ["action"],
     },
   },
   {
@@ -113,12 +126,24 @@ export const toolFunctionDeclarations: any[] = [
     parameters: {
       type: "OBJECT",
       properties: {
-        prompt: {
+        productName: {
           type: "STRING",
-          description: "Description of the product to generate a listing for.",
+          description: "Name of the product to generate a listing for (e.g. 'Handmade Ceramic Mug').",
+        },
+        category: {
+          type: "STRING",
+          description: "Product category (e.g. 'home decor', 'apparel').",
+        },
+        targetAudience: {
+          type: "STRING",
+          description: "Who the product is for (e.g. 'coffee lovers', 'fitness enthusiasts').",
+        },
+        tone: {
+          type: "STRING",
+          description: "Listing tone: 'professional', 'playful', 'luxury', 'minimal'.",
         },
       },
-      required: ["prompt"],
+      required: ["productName"],
     },
   },
   {
@@ -153,21 +178,22 @@ export const toolFunctionDeclarations: any[] = [
   },
   {
     name: "generate_product_image",
-    description: "Generate a product image from a text prompt.",
+    description:
+      "Generate a logo or artwork image (clipart, graphic design, illustration) from a text prompt. Use ONLY when the user wants artwork or a logo — NOT when they want a t-shirt, mug, or any physical product mockup. For physical products use printify_generate_mockups instead (optionally chained after this if artwork is needed first).",
     parameters: {
       type: "OBJECT",
       properties: {
         prompt: {
           type: "STRING",
-          description: "Describe the product image to generate.",
+          description: "Describe the logo or artwork to generate (e.g. 'a bold sun graphic', 'minimalist mountain logo').",
         },
         style: {
           type: "STRING",
-          description: "Image style: 'studio', 'lifestyle', 'flat-lay'.",
+          description: "Image style: 'studio', 'lifestyle', 'minimal', 'bold'.",
         },
         aspectRatio: {
           type: "STRING",
-          description: "Aspect ratio: '1:1', '4:3', '16:9'.",
+          description: "Aspect ratio: '1:1', '4:5', '16:9'.",
         },
       },
       required: ["prompt"],
@@ -233,6 +259,73 @@ export const toolFunctionDeclarations: any[] = [
         },
       },
       required: ["customerMessage"],
+    },
+  },
+  {
+    name: "printify_generate_mockups",
+    description:
+      "Create a physical product mockup (t-shirt, mug, hoodie, etc.) on Printify using uploaded artwork. Use when the user asks for a product mockup, t-shirt, or merch. If no artwork imageId is provided yet, first call generate_product_image to get one, then pass the imageId here.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        productTitle: {
+          type: "STRING",
+          description: "Name for the Printify product (e.g. 'Ali Shamsi Tee').",
+        },
+        productType: {
+          type: "STRING",
+          description: "Type of product the user asked for: 'tshirt', 'mug', 'hoodie', 'hat', 'tote', 'poster', 'phone case', 'tank', 'long sleeve'. Always pass this — it determines the correct Printify blueprint.",
+        },
+        imageId: {
+          type: "STRING",
+          description: "The imageId returned by generate_product_image. Preferred — pass this instead of base64.",
+        },
+        imageBase64: {
+          type: "STRING",
+          description: "Base64-encoded image data (only if imageId is not available).",
+        },
+        imageUrl: {
+          type: "STRING",
+          description: "Public URL of the artwork image (alternative to imageId/imageBase64).",
+        },
+        blueprintId: {
+          type: "NUMBER",
+          description: "Printify blueprint ID. Default is 6 (Unisex Heavy Cotton Tee). Omit for default.",
+        },
+      },
+      required: ["productTitle"],
+    },
+  },
+  {
+    name: "generate_marketing_copy",
+    description:
+      "Generate marketing copy for a product: Instagram captions, email campaign, Facebook ad, and Twitter posts. Use when the user asks for marketing, promotion, campaign, launch copy, captions, or ad content.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        productName: {
+          type: "STRING",
+          description: "The name of the product to generate copy for.",
+        },
+        productDescription: {
+          type: "STRING",
+          description: "Optional short description of the product.",
+        },
+        targetAudience: {
+          type: "STRING",
+          description: "Who the product is for (e.g. 'fitness enthusiasts', 'young professionals').",
+        },
+        tone: {
+          type: "STRING",
+          description: "Tone of voice: 'excited', 'professional', 'playful', 'luxury', 'urgent'.",
+        },
+        platforms: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Platforms to generate for: 'instagram', 'email', 'facebook_ad', 'twitter'. Defaults to all.",
+        },
+      },
+      required: ["productName"],
     },
   },
 ];

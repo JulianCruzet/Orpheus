@@ -11,6 +11,8 @@ export interface ShopifyProductSummary {
   status: string;
   vendor: string;
   handle: string;
+  price: number;
+  inventory: number;
 }
 
 interface ShopifyProductsResponse {
@@ -20,6 +22,10 @@ interface ShopifyProductsResponse {
     status?: string;
     vendor?: string;
     handle?: string;
+    variants?: Array<{
+      price?: string;
+      inventory_quantity?: number;
+    }>;
   }>;
 }
 
@@ -49,6 +55,8 @@ function mockProducts(limit: number): ShopifyProductSummary[] {
       status: "active",
       vendor: "Shams-E",
       handle: "midnight-noir-hoodie",
+      price: 79.00,
+      inventory: 24,
     },
     {
       id: 1002,
@@ -56,6 +64,8 @@ function mockProducts(limit: number): ShopifyProductSummary[] {
       status: "draft",
       vendor: "Shams-E",
       handle: "solar-drift-cargo-pants",
+      price: 95.00,
+      inventory: 12,
     },
     {
       id: 1003,
@@ -63,6 +73,8 @@ function mockProducts(limit: number): ShopifyProductSummary[] {
       status: "active",
       vendor: "Shams-E",
       handle: "aurora-mesh-tee",
+      price: 45.00,
+      inventory: 38,
     },
   ];
 
@@ -87,6 +99,8 @@ async function fetchProducts(
     status: product.status ?? "unknown",
     vendor: product.vendor ?? "unknown",
     handle: product.handle ?? "",
+    price: parseFloat(product.variants?.[0]?.price ?? "0"),
+    inventory: product.variants?.[0]?.inventory_quantity ?? 0,
   }));
 }
 

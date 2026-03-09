@@ -4,10 +4,48 @@ import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+    >
+      <motion.img
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        src={src}
+        alt="preview"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[90vh] max-w-[90vw] rounded-xl border border-white/10 object-contain shadow-2xl"
+      />
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white/60 transition hover:bg-white/20 hover:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </motion.div>
+  );
+}
+
 type ChatBubble = {
   id: string;
   role: "assistant" | "user";
   content: string;
+  images?: string[];
 };
 
 type ToolActivity = {
@@ -59,6 +97,7 @@ export function ChatSidebar({
   const [isStreaming, setIsStreaming] = useState(false);
   const [tools, setTools] = useState<ToolActivity[]>([]);
   const [confirmation, setConfirmation] = useState<ConfirmationState>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
@@ -171,6 +210,32 @@ export function ChatSidebar({
 
                   if (WRITE_TOOLS.has(toolName) && status === "done") {
                     hadWriteTool = true;
+                  }
+
+                  // Inject image bubbles for image tools
+                  if (status === "done") {
+                    const data = result?.data as Record<string, unknown> | undefined;
+                    if (toolName === "printify_generate_mockups" && Array.isArray(data?.mockupUrls)) {
+                      setMessages((prev) => [
+                        ...prev,
+                        {
+                          id: `mockups-${Date.now()}`,
+                          role: "assistant",
+                          content: `here are your mockups:`,
+                          images: data.mockupUrls as string[],
+                        },
+                      ]);
+                    } else if (toolName === "generate_product_image" && typeof data?.imageUrl === "string") {
+                      setMessages((prev) => [
+                        ...prev,
+                        {
+                          id: `img-${Date.now()}`,
+                          role: "assistant",
+                          content: `generated artwork:`,
+                          images: [data.imageUrl as string],
+                        },
+                      ]);
+                    }
                   }
 
                   setTools((prev) => {
@@ -316,6 +381,7 @@ export function ChatSidebar({
   }
 
   return (
+    <>
     <motion.aside
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -373,8 +439,24 @@ export function ChatSidebar({
                     <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#5EEAD4]/10 text-[9px] text-[#5EEAD4]">
                       S
                     </div>
-                    <div className="min-w-0 text-[13px] leading-[1.65] text-white/75 prose-sm prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:text-white/90">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <div className="min-w-0">
+                      <div className="text-[13px] leading-[1.65] text-white/75 prose-sm prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:text-white/90">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                      {msg.images && msg.images.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {msg.images.map((src, i) => (
+                            <img
+                              key={i}
+                              src={src}
+                              alt={`mockup ${i + 1}`}
+                              onClick={() => setPreviewSrc(src)}
+                              className="cursor-zoom-in rounded-lg border border-white/10 object-cover transition hover:border-white/30"
+                              style={{ width: "100%", maxWidth: "280px" }}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -537,5 +619,12 @@ export function ChatSidebar({
         </form>
       </div>
     </motion.aside>
+
+    <AnimatePresence>
+      {previewSrc && (
+        <ImageLightbox src={previewSrc} onClose={() => setPreviewSrc(null)} />
+      )}
+    </AnimatePresence>
+    </>
   );
 }

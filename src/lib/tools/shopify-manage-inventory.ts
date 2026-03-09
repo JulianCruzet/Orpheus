@@ -4,7 +4,8 @@ import { ToolExecutionResult } from "@/lib/tools/types";
 export interface ShopifyManageInventoryInput {
   action?: "read" | "update";
   inventoryItemId?: number;
-  locationId?: number;
+  productId?: number;   // alternative to inventoryItemId — tool will resolve automatically
+  locationId?: number;  // optional — auto-fetched from store if omitted
   available?: number;
 }
 
@@ -22,6 +23,14 @@ interface ShopifyInventoryLevelsResponse {
     available: number;
     updated_at?: string;
   }>;
+}
+
+interface ShopifyLocationsResponse {
+  locations: Array<{ id: number; name: string; active: boolean }>;
+}
+
+interface ShopifyProductVariantsResponse {
+  product: { variants: Array<{ id: number; inventory_item_id: number; title: string; inventory_management: string | null }> };
 }
 
 interface ShopifyInventoryLevelSetResponse {
@@ -100,6 +109,34 @@ function mockUpdateResult(
   };
 }
 
+async function getFirstLocationId(client: ShopifyClient): Promise<number> {
+  const response = await client.request<ShopifyLocationsResponse>("/locations.json");
+  const active = response.locations.find((l) => l.active) ?? response.locations[0];
+  if (!active) throw new Error("No locations found in Shopify store.");
+  return active.id;
+}
+
+async function getInventoryItemIdFromProduct(
+  client: ShopifyClient,
+  productId: number,
+): Promise<number> {
+  const response = await client.request<ShopifyProductVariantsResponse>(
+    `/products/${productId}.json?fields=variants`,
+  );
+  const first = response.product.variants[0];
+  if (!first) throw new Error(`No variants found for product ${productId}.`);
+
+  // Enable inventory tracking if not already set
+  if (first.inventory_management !== "shopify") {
+    await client.request(`/variants/${first.id}.json`, {
+      method: "PUT",
+      body: { variant: { id: first.id, inventory_management: "shopify" } },
+    });
+  }
+
+  return first.inventory_item_id;
+}
+
 async function readInventoryLevel(
   client: ShopifyClient,
   inventoryItemId: number,
@@ -148,27 +185,11 @@ export async function shopifyManageInventory(
 ): Promise<ToolExecutionResult<ShopifyInventoryLevel | ShopifyInventoryLevel[]>> {
   const action = parseAction(input);
 
-  const itemError = validateRequiredNumber(input.inventoryItemId, "inventoryItemId");
-  if (itemError) {
+  if (!input.inventoryItemId && !input.productId) {
     return {
       status: "error",
-      message: itemError,
-      error: {
-        code: "INVALID_INVENTORY_INPUT",
-        details: itemError,
-      },
-    };
-  }
-
-  const locationError = validateRequiredNumber(input.locationId, "locationId");
-  if (locationError) {
-    return {
-      status: "error",
-      message: locationError,
-      error: {
-        code: "INVALID_INVENTORY_INPUT",
-        details: locationError,
-      },
+      message: "provide either inventoryItemId or productId.",
+      error: { code: "INVALID_INVENTORY_INPUT", details: "inventoryItemId or productId is required." },
     };
   }
 
@@ -178,81 +199,51 @@ export async function shopifyManageInventory(
       return {
         status: "error",
         message: availableError,
-        error: {
-          code: "INVALID_INVENTORY_INPUT",
-          details: availableError,
-        },
+        error: { code: "INVALID_INVENTORY_INPUT", details: availableError },
       };
     }
   }
 
   if (isMockModeEnabled()) {
     if (action === "update") {
-      const updated = mockUpdateResult(input);
-      return {
-        status: "success",
-        message: "updated mock inventory level.",
-        data: updated,
-      };
+      return { status: "success", message: "updated mock inventory level.", data: mockUpdateResult(input) };
     }
-
     const levels = mockReadResult(input);
-    return {
-      status: "success",
-      message: `returned ${levels.length} mock inventory level(s).`,
-      data: levels,
-    };
+    return { status: "success", message: `returned ${levels.length} mock inventory level(s).`, data: levels };
   }
 
   try {
     const client = createShopifyClientFromEnv();
 
-    if (action === "update") {
-      const updated = await updateInventoryLevel(
-        client,
-        input.inventoryItemId as number,
-        input.locationId as number,
-        input.available as number,
-      );
+    // Resolve inventory item ID from product if needed
+    const inventoryItemId = input.inventoryItemId
+      ?? await getInventoryItemIdFromProduct(client, input.productId as number);
 
-      return {
-        status: "success",
-        message: "updated shopify inventory level.",
-        data: updated,
-      };
+    // Auto-fetch location ID if not provided
+    const locationId = input.locationId ?? await getFirstLocationId(client);
+
+    if (action === "update") {
+      const updated = await updateInventoryLevel(client, inventoryItemId, locationId, input.available as number);
+      return { status: "success", message: "updated shopify inventory level.", data: updated };
     }
 
-    const level = await readInventoryLevel(
-      client,
-      input.inventoryItemId as number,
-      input.locationId as number,
-    );
+    const level = await readInventoryLevel(client, inventoryItemId, locationId);
 
     if (!level) {
       return {
         status: "error",
         message: "inventory level not found for the provided item/location.",
-        error: {
-          code: "INVENTORY_LEVEL_NOT_FOUND",
-        },
+        error: { code: "INVENTORY_LEVEL_NOT_FOUND" },
       };
     }
 
-    return {
-      status: "success",
-      message: "fetched shopify inventory level.",
-      data: level,
-    };
+    return { status: "success", message: "fetched shopify inventory level.", data: level };
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unknown error";
-
     return {
       status: "error",
       message: "unable to manage inventory right now.",
-      error: {
-        code: "SHOPIFY_MANAGE_INVENTORY_FAILED",
-        details,
-      },
+      error: { code: "SHOPIFY_MANAGE_INVENTORY_FAILED", details },
     };
   }
 }
