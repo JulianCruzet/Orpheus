@@ -54,9 +54,7 @@ function buildMockOutput(input: GenerateMarketingCopyInput): GenerateMarketingCo
   if (platforms.includes("instagram")) {
     out.instagram = {
       captions: [
-        `✨ Introducing ${name} — your new favorite. Shop now via link in bio! #NewDrop #ShopNow`,
-        `We made ${name} for people who don't settle. Are you one of them? 🔥 #MustHave`,
-        `The ${name} is here and it's everything. Tap to grab yours before it's gone. 🛒`,
+        `introducing ${name} — designed for those who don't settle. shop now via link in bio. #NewDrop #ShopNow #MustHave`,
       ],
     };
   }
@@ -97,7 +95,7 @@ async function generateWithGemini(
 
   const schemaFields: string[] = [`"productName": string`];
   if (platforms.includes("instagram"))
-    schemaFields.push(`"instagram": { "captions": string[] } // 3 captions, each with emojis and hashtags, under 220 chars`);
+    schemaFields.push(`"instagram": { "captions": string[] } // exactly 1 caption: punchy, professional, with relevant hashtags, no emojis, under 300 chars`);
   if (platforms.includes("email"))
     schemaFields.push(`"email": { "subject": string, "body": string } // subject under 60 chars, body 3-4 short paragraphs`);
   if (platforms.includes("facebook_ad"))

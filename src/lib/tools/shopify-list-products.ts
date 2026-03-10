@@ -13,6 +13,7 @@ export interface ShopifyProductSummary {
   handle: string;
   price: number;
   inventory: number;
+  imageUrl: string | null;
 }
 
 interface ShopifyProductsResponse {
@@ -26,6 +27,7 @@ interface ShopifyProductsResponse {
       price?: string;
       inventory_quantity?: number;
     }>;
+    image?: { src?: string } | null;
   }>;
 }
 
@@ -57,6 +59,7 @@ function mockProducts(limit: number): ShopifyProductSummary[] {
       handle: "midnight-noir-hoodie",
       price: 79.00,
       inventory: 24,
+      imageUrl: null,
     },
     {
       id: 1002,
@@ -66,6 +69,7 @@ function mockProducts(limit: number): ShopifyProductSummary[] {
       handle: "solar-drift-cargo-pants",
       price: 95.00,
       inventory: 12,
+      imageUrl: null,
     },
     {
       id: 1003,
@@ -75,6 +79,7 @@ function mockProducts(limit: number): ShopifyProductSummary[] {
       handle: "aurora-mesh-tee",
       price: 45.00,
       inventory: 38,
+      imageUrl: null,
     },
   ];
 
@@ -101,6 +106,7 @@ async function fetchProducts(
     handle: product.handle ?? "",
     price: parseFloat(product.variants?.[0]?.price ?? "0"),
     inventory: product.variants?.[0]?.inventory_quantity ?? 0,
+    imageUrl: product.image?.src ?? null,
   }));
 }
 

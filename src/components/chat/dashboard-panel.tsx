@@ -140,8 +140,8 @@ export function DashboardPanel({
           </p>
         </div>
 
-        {/* Top row: Health + Revenue */}
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Top row: Health + Revenue + Conversion */}
+        <div className="mb-4 grid grid-cols-3 gap-4">
           {/* Health Score */}
           <div className={`${cardBase} flex flex-col items-center justify-center border ${getHealthBg(healthScore)}`}>
             <p
@@ -238,7 +238,7 @@ export function DashboardPanel({
         </div>
 
         {/* Bottom row: Orders + Low Stock + Insights */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-3 gap-4">
           {/* Recent Orders */}
           <div className={cardBase}>
             <p

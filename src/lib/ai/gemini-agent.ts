@@ -3,6 +3,7 @@ import {
   Content,
   Part,
   FunctionCallPart,
+  FunctionCallingMode,
 } from "@google/generative-ai";
 import { toolFunctionDeclarations } from "./tool-schemas";
 
@@ -13,44 +14,79 @@ export type AgentToolCall = {
   thought: string;
 };
 
+export type AgentParallelToolCalls = {
+  kind: "parallel_tool_calls";
+  calls: Omit<AgentToolCall, "kind">[];
+};
+
 export type AgentFinal = {
   kind: "final";
   response: string;
 };
 
-export type AgentStep = AgentToolCall | AgentFinal;
+export type AgentStep = AgentToolCall | AgentParallelToolCalls | AgentFinal;
 
 type ChatMessage = {
   role: string;
   content: string;
 };
 
-const SYSTEM_PROMPT = `You are Shams-E, an AI e-commerce copilot. You help users build, manage, and grow their Shopify stores.
+const SYSTEM_PROMPT = `you are shams-e, an ecommerce copilot. you help users build, manage, and grow their shopify stores.
 
-Your capabilities (via function calls):
-- List, create, and update Shopify products
-- Manage inventory levels
-- View and manage orders
-- Generate AI product listings (title, description, tags, SEO, pricing)
-- Research markets and competitors
-- Generate product images
-- Manage discounts and collections
-- Analyze store performance
-- Draft customer support responses
+behavior:
+- be action-first: when you have enough information to call a tool, call it immediately — do not re-explain or ask for confirmation unless the action is destructive.
+- follow-through rule: if you asked the user a question and they answered it, call the relevant tool immediately. never ignore a direct answer to your own question.
+- chain tools when needed (e.g., generate listing → create product). call multiple tools in one turn when they are independent.
+- for destructive actions (update product, manage inventory), always call with confirmed=true since the system handles confirmation separately.
+- if you're unsure what the user wants, ask a clarifying question instead of guessing.
+- after tool results come back, summarize what happened in plain language.
 
-Guidelines:
-- Be concise and direct. Use lowercase, casual tone.
-- When a user asks to do something, use the appropriate tool — don't just describe what you'd do.
-- Chain tools when needed (e.g., generate listing → create product).
-- For destructive actions (update product, manage inventory), always call with confirmed=true since the system handles confirmation separately.
-- If you're unsure what the user wants, ask a clarifying question instead of guessing.
-- After tool results come back, summarize what happened in plain language.
+CRITICAL FIRST RULE — existing product check:
+- when the user mentions a product by name (e.g. 'the hoodie', 'sunset mug', 'flag hoodie'), your FIRST tool call MUST be shopify_list_products to look it up. this applies to ALL requests about existing products: marketing, updates, inventory, campaigns, etc.
+- product name matching: when comparing the user's query to shopify_list_products results, use FUZZY matching. ignore emojis, special characters, casing, and extra words in product titles. for example, if the user says "pakistan x philippines flag hoodie" and the catalog has "🇵🇭❤️🇵🇰 Unite! Pakistan x Philippines Flag Hoodie", that IS a match. if any product title contains most of the keywords the user mentioned, treat it as a match.
+- NEVER call generate_product_image for a product that already exists in shopify. do not generate new artwork for existing products.
+- only call generate_product_image when the user explicitly asks to CREATE something new (e.g. 'design a new logo', 'make me a new t-shirt').
 
-Formatting rules:
-- Use markdown for structure: **bold** for emphasis, bullet lists for multiple items, line breaks between sections.
-- When listing products or data, use a clean bulleted list with each item on its own line.
-- Keep responses short — 2-4 sentences for simple answers, bulleted lists for data.
-- Never dump raw JSON or IDs to the user. Translate tool results into readable summaries.`;
+marketing campaign rule — for instagram campaigns, ads, or promotional content:
+- for EXISTING products: shopify_list_products (to get product info) → printify_generate_mockups (to get 2-3 lifestyle mockup photos of the product being worn/used) → generate_marketing_copy (with platforms: ["instagram"] for a single caption).
+- for NEW products: generate_product_image → printify_generate_mockups → generate_marketing_copy.
+- the deliverable is: 2-3 mockup photos + one caption with hashtags. that's it. keep it clean.
+- when calling generate_marketing_copy for instagram, always pass platforms: ["instagram"]. only include other platforms if the user explicitly asks for them.
+
+tool selection rules:
+- product lookup rule: shopify_update_product and shopify_manage_inventory require a numeric productId. if the user refers to a product by name, first call shopify_list_products to find its ID, then immediately call the update/inventory tool with that ID.
+- upload to shopify rule: when the user says 'upload to shopify', 'add to shopify', or 'put it on shopify' — they want shopify_create_product called with the product details you already know. if you need a price, ask once then act immediately on their answer.
+- generate_product_image: ONLY for creating NEW logos and artwork. never for existing products.
+- printify_generate_mockups: ONLY for creating NEW physical product mockups. never for existing products.
+- shopify_create_product: create a new shopify listing. always pass status='active'. ALWAYS call generate_product_listing first to get a professional title, description, and tags.
+- shopify_update_product: change price, title, description, or tags. requires productId — look it up first if not known.
+- shopify_manage_inventory: read or update stock levels.
+- generate_marketing_copy: captions, email campaigns, ads, promotional content. always pass the specific platforms array (e.g. ["instagram"]). do not default to all platforms unless the user asks for multiple.
+
+formatting:
+- keep responses concise and lowercase. never show a generic help menu unless the user explicitly asks what you can do.
+- use markdown for structure: **bold** for headings/labels, bullet lists for multiple items, and clear section breaks.
+- ABSOLUTELY NO EMOJIS. zero. none. no flags, hearts, sparkles, pointing fingers, fire, stars, or any unicode emoji characters. this is a strict rule with no exceptions. write plain text only.
+- NEVER show internal IDs (product IDs, inventory item IDs, variant IDs, etc.) to the user. those are for your internal use only.
+- when listing products, format each as: **product name** — $price (stock: N). example:
+  - **awesome sunset mug** — $24.00 (stock: 15)
+  - **logo tee** — $25.00 (stock: 8)
+- when listing orders, format each as: **order #name** — $total (status)
+- when showing marketing copy, separate each platform with a bold heading and line breaks:
+  **instagram**
+  (caption text here)
+
+  **email**
+  subject: (subject)
+  (body here)
+
+  **facebook ad**
+  headline: (headline)
+  (body + cta)
+
+  **twitter**
+  (tweet text here)
+- never dump raw JSON to the user. translate tool results into clean, readable summaries.`;
 
 function convertRole(role: string): "user" | "model" | "function" {
   if (role === "assistant") return "model";
@@ -100,14 +136,21 @@ function buildContents(conversation: ChatMessage[]): Content[] {
 
     // For assistant messages that encode tool_call: or confirmation_required:, convert to model
     if (geminiRole === "model" && msg.content.startsWith("tool_call:")) {
-      const toolName = msg.content.slice("tool_call:".length);
+      const rest = msg.content.slice("tool_call:".length);
+      // Format: "toolName:jsonArgs" or legacy "toolName"
+      const colonIdx = rest.indexOf(":{");
+      const toolName = colonIdx >= 0 ? rest.slice(0, colonIdx) : rest;
+      let args: Record<string, unknown> = {};
+      if (colonIdx >= 0) {
+        try { args = JSON.parse(rest.slice(colonIdx + 1)); } catch { /* keep empty */ }
+      }
       contents.push({
         role: "model",
         parts: [
           {
             functionCall: {
               name: toolName,
-              args: {},
+              args,
             },
           } as unknown as Part,
         ],
@@ -139,6 +182,139 @@ function buildContents(conversation: ChatMessage[]): Content[] {
   return merged;
 }
 
+// Tool groups — map conversation intent to relevant tool subsets.
+// Always include a "core" set so the model can chain when needed.
+const TOOL_GROUPS: Record<string, string[]> = {
+  shopify: [
+    "shopify_list_products", "shopify_create_product", "shopify_update_product",
+    "shopify_manage_inventory", "shopify_manage_orders", "shopify_discounts_collections",
+    "generate_product_listing",
+  ],
+  creative: [
+    "generate_product_image", "printify_generate_mockups", "generate_product_listing",
+    "generate_marketing_copy",
+  ],
+  research: [
+    "research_market", "research_competitors", "analyze_store_performance",
+  ],
+  support: [
+    "draft_customer_response",
+  ],
+};
+
+// Always available so the model can chain across groups.
+const ALWAYS_AVAILABLE = new Set([
+  "shopify_list_products", "shopify_create_product", "generate_product_listing",
+]);
+
+function pickRelevantTools(conversation: ChatMessage[]): string[] | undefined {
+  const lastUser = [...conversation].reverse().find((m) => m.role === "user");
+  if (!lastUser) return undefined; // send all
+
+  const text = lastUser.content.toLowerCase();
+  const matched = new Set<string>(ALWAYS_AVAILABLE);
+
+  const signals: [RegExp, string][] = [
+    [/product|catalog|listing|store item|inventory|stock|order|fulfil|discount|coupon|collection|upload.*shopify|add.*shopify|put.*shopify/, "shopify"],
+    [/image|logo|artwork|design|mockup|t-?shirt|mug|hoodie|merch|tote|poster|phone case|marketing|caption|campaign|email|ad\b|promo/, "creative"],
+    [/market|trend|research|niche|competitor|rival|analytics|performance|revenue|sales|stats/, "research"],
+    [/customer|support|reply|complaint|response/, "support"],
+  ];
+
+  let anyMatch = false;
+  for (const [regex, group] of signals) {
+    if (regex.test(text)) {
+      for (const tool of TOOL_GROUPS[group]) matched.add(tool);
+      anyMatch = true;
+    }
+  }
+
+  // If nothing matched, send all tools (don't restrict)
+  if (!anyMatch) return undefined;
+
+  return Array.from(matched);
+}
+
+// ── Conversation compaction ──
+// When the conversation exceeds a threshold, summarize older messages into a
+// single "summary" user message so the context stays lean.  We keep the most
+// recent RECENT_WINDOW messages intact so the model has full fidelity on the
+// current exchange.
+
+const COMPACTION_THRESHOLD = 24; // trigger when total messages exceed this
+const RECENT_WINDOW = 8;        // always keep the last N messages verbatim
+
+export async function compactConversation(
+  conversation: ChatMessage[],
+): Promise<ChatMessage[]> {
+  // Don't count system messages toward the threshold
+  const nonSystem = conversation.filter((m) => m.role !== "system");
+  if (nonSystem.length <= COMPACTION_THRESHOLD) return conversation;
+
+  const systemMessages = conversation.filter((m) => m.role === "system");
+  const cutoff = nonSystem.length - RECENT_WINDOW;
+  const oldMessages = nonSystem.slice(0, cutoff);
+  const recentMessages = nonSystem.slice(cutoff);
+
+  // Build a plain-text digest of old messages for the summarizer
+  const digest = oldMessages
+    .map((m) => {
+      if (m.role === "tool") {
+        try {
+          const parsed = JSON.parse(m.content);
+          return `[tool:${parsed.toolName ?? "unknown"}] ${parsed.ok ? "success" : "error"}`;
+        } catch {
+          return `[tool] ${m.content.slice(0, 100)}`;
+        }
+      }
+      if (m.content.startsWith("tool_call:")) {
+        return `[called ${m.content.slice("tool_call:".length)}]`;
+      }
+      return `${m.role}: ${m.content.slice(0, 200)}`;
+    })
+    .join("\n");
+
+  // Use Gemini to produce a compact summary
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  let summary: string;
+
+  if (apiKey) {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `summarize this conversation history in 3-5 bullet points. focus on: what the user asked for, what tools were called, what the outcomes were. be concise.\n\n${digest}`,
+              },
+            ],
+          },
+        ],
+      });
+      summary =
+        result.response.candidates?.[0]?.content?.parts
+          ?.map((p) => ("text" in p ? (p as { text: string }).text : ""))
+          .join("") ?? "previous conversation context unavailable.";
+    } catch (err) {
+      console.warn("[compaction] gemini summarization failed, using fallback", err);
+      summary = digest.slice(0, 600);
+    }
+  } else {
+    // No API key — just truncate
+    summary = digest.slice(0, 600);
+  }
+
+  const summaryMessage: ChatMessage = {
+    role: "user",
+    content: `[conversation summary — earlier messages were compacted]\n${summary}`,
+  };
+
+  return [...systemMessages, summaryMessage, ...recentMessages];
+}
+
 export async function geminiRespond(
   conversation: ChatMessage[],
 ): Promise<AgentStep> {
@@ -151,10 +327,28 @@ export async function geminiRespond(
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
+
+    const allowedTools = pickRelevantTools(conversation);
+
+    // If the conversation already has tool results, the model should be free
+    // to summarize (AUTO).  Only force tool calls (ANY) on the first pass
+    // when there are no tool results yet and we have a clear intent match.
+    const hasToolResults = conversation.some((m) => m.role === "tool");
+
+    const toolConfig = allowedTools && !hasToolResults
+      ? {
+          functionCallingConfig: {
+            mode: FunctionCallingMode.ANY,
+            allowedFunctionNames: allowedTools,
+          },
+        }
+      : undefined;
+
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_PROMPT,
       tools: [{ functionDeclarations: toolFunctionDeclarations }],
+      ...(toolConfig && { toolConfig }),
     });
 
     const contents = buildContents(conversation);
@@ -167,18 +361,29 @@ export async function geminiRespond(
       return fallbackRespond(conversation);
     }
 
-    // Check for function calls
-    const functionCallPart = candidate.content.parts.find(
+    // Check for function calls (Gemini can return multiple in one response)
+    const functionCallParts = candidate.content.parts.filter(
       (p): p is FunctionCallPart => "functionCall" in p,
     );
 
-    if (functionCallPart) {
-      const fc = functionCallPart.functionCall;
+    if (functionCallParts.length === 1) {
+      const fc = functionCallParts[0].functionCall;
       return {
         kind: "tool_call",
         toolName: fc.name,
         input: (fc.args as Record<string, unknown>) ?? {},
         thought: `calling ${fc.name} to handle your request.`,
+      };
+    }
+
+    if (functionCallParts.length > 1) {
+      return {
+        kind: "parallel_tool_calls",
+        calls: functionCallParts.map((p) => ({
+          toolName: p.functionCall.name,
+          input: (p.functionCall.args as Record<string, unknown>) ?? {},
+          thought: `calling ${p.functionCall.name}.`,
+        })),
       };
     }
 

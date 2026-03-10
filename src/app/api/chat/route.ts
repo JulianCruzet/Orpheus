@@ -8,7 +8,7 @@ import { appendToolExecutionLog } from "@/lib/db/action-log-store";
 import { redactSensitiveData } from "@/lib/security/redact";
 import { executeTool } from "@/lib/tools/registry";
 import { StructuredToolResult } from "@/lib/tools/types";
-import { geminiRespond } from "@/lib/ai/gemini-agent";
+import { geminiRespond, compactConversation, AgentStep } from "@/lib/ai/gemini-agent";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -102,8 +102,35 @@ function stripBinaryData(data: unknown): unknown {
   return result;
 }
 
+// Truncate arrays to keep context lean — the model only needs a summary.
+function truncateData(data: unknown): unknown {
+  if (Array.isArray(data)) {
+    const truncated = data.slice(0, 5).map(truncateData);
+    if (data.length > 5) {
+      truncated.push(`...and ${data.length - 5} more items`);
+    }
+    return truncated;
+  }
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      result[key] = truncateData(val);
+    }
+    return result;
+  }
+  // Truncate long strings (e.g. verbose HTML descriptions)
+  if (typeof data === "string" && data.length > 500) {
+    return data.slice(0, 500) + "...[truncated]";
+  }
+  return data;
+}
+
 function asToolMessage(result: StructuredToolResult<unknown>): ChatMessage {
-  const stripped = { ...result, data: stripBinaryData(result.data) };
+  // truncateData + stripBinaryData already keep the payload small.
+  // Do NOT slice raw JSON — that breaks JSON.parse in buildContents and
+  // causes Gemini to see "unknown_tool" responses, triggering infinite loops.
+  const stripped = { ...result, data: truncateData(stripBinaryData(result.data)) };
   return {
     role: "tool",
     content: JSON.stringify(stripped),
@@ -215,22 +242,11 @@ export async function POST(request: NextRequest): Promise<Response> {
           ),
         );
 
+        // The full system prompt lives in gemini-agent.ts (systemInstruction).
+        // This marker is only kept so mergeMessages can identify system entries.
         const systemPrompt: ChatMessage = {
           role: "system",
-          content: [
-            "you are shams-e, an ecommerce copilot. be action-first: when you have enough information to call a tool, call it immediately — do not re-explain or ask for confirmation unless the action is destructive.",
-            "follow-through rule: if you asked the user a question and they answered it, call the relevant tool immediately. never ignore a direct answer to your own question.",
-            "product lookup rule: shopify_update_product and shopify_manage_inventory require a numeric productId. if the user refers to a product by name (e.g. 'the mug', 'sunset tee'), first call shopify_list_products to find its ID, then immediately call the update/inventory tool with that ID. do not ask the user for the ID.",
-            "upload to shopify rule: when the user says 'upload to shopify', 'add to shopify', or 'put it on shopify' — they want shopify_create_product called with the product details you already know. if you need a price, ask once then act immediately on their answer.",
-            "tool selection rules:",
-            "- generate_product_image: logos and artwork only.",
-            "- printify_generate_mockups: physical products (t-shirt, mug, hoodie, etc.). chain after generate_product_image if artwork is needed.",
-            "- shopify_create_product: create a new shopify listing. always pass status='active'. description generation rule: ALWAYS call generate_product_listing first to get a professional title, description, and tags — even if the user gave a description. pass the generate_product_listing output as descriptionHtml and tags into shopify_create_product.",
-            "- shopify_update_product: change price, title, description, or tags. requires productId — look it up first if not known.",
-            "- shopify_manage_inventory: read or update stock levels.",
-            "- generate_marketing_copy: captions, email campaigns, ads, promotional content.",
-            "keep responses concise and lowercase. never show a generic help menu unless the user explicitly asks what you can do.",
-          ].join(" "),
+          content: "shams-e ecommerce copilot",
         };
 
         const restoredConversation = mergeMessages(existingMessages, body.messages);
@@ -241,44 +257,85 @@ export async function POST(request: NextRequest): Promise<Response> {
         ];
 
         const completedWriteTools: string[] = [];
-        const maxIterations = 5;
+        const maxIterations = 8;
+        let lastToolName: string | null = null;
+        let repeatCount = 0;
 
         for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+          // Auto-compact conversation when it gets long to save tokens
+          const compacted = await compactConversation(workingConversation) as ChatMessage[];
+          if (compacted.length < workingConversation.length) {
+            workingConversation.length = 0;
+            workingConversation.push(...compacted);
+          }
+
           const modelStep = await geminiRespond(workingConversation);
 
-          if (modelStep.kind === "tool_call") {
-            controller.enqueue(
-              encoder.encode(
-                toSseEvent("assistant_thought", {
-                  text: modelStep.thought,
-                }),
-              ),
+          // ── Handle tool calls (single or parallel) ──
+          const toolCalls =
+            modelStep.kind === "tool_call"
+              ? [{ toolName: modelStep.toolName, input: modelStep.input, thought: modelStep.thought }]
+              : modelStep.kind === "parallel_tool_calls"
+                ? modelStep.calls
+                : null;
+
+          if (toolCalls) {
+            // Loop detection — if the same single tool is called 2+ times in a row,
+            // the model is stuck. Inject a nudge to break the loop.
+            const primaryTool = toolCalls[0]?.toolName ?? null;
+            if (toolCalls.length === 1 && primaryTool === lastToolName) {
+              repeatCount += 1;
+              if (repeatCount >= 2) {
+                // Force the model to summarize what it already has
+                workingConversation.push({
+                  role: "user",
+                  content:
+                    "[system: you already called this tool — summarize the results you have so far for the user instead of calling it again.]",
+                });
+                lastToolName = null;
+                repeatCount = 0;
+                continue;
+              }
+            } else {
+              lastToolName = primaryTool;
+              repeatCount = 0;
+            }
+            // Emit thoughts & action summaries for every call
+            for (const call of toolCalls) {
+              controller.enqueue(
+                encoder.encode(
+                  toSseEvent("assistant_thought", { text: call.thought }),
+                ),
+              );
+              controller.enqueue(
+                encoder.encode(
+                  toSseEvent("action_summary", {
+                    toolName: call.toolName,
+                    summary: buildActionSummary(call.toolName, call.input),
+                    destructive: DESTRUCTIVE_TOOLS.has(call.toolName),
+                  }),
+                ),
+              );
+              controller.enqueue(
+                encoder.encode(
+                  toSseEvent("tool_call", {
+                    toolName: call.toolName,
+                    input: redactSensitiveData(call.input),
+                  }),
+                ),
+              );
+            }
+
+            // Check if any call requires confirmation
+            const needsConfirm = toolCalls.find((c) =>
+              requiresConfirmation(c.toolName, c.input),
             );
 
-            controller.enqueue(
-              encoder.encode(
-                toSseEvent("action_summary", {
-                  toolName: modelStep.toolName,
-                  summary: buildActionSummary(modelStep.toolName, modelStep.input),
-                  destructive: DESTRUCTIVE_TOOLS.has(modelStep.toolName),
-                }),
-              ),
-            );
-
-            controller.enqueue(
-              encoder.encode(
-                toSseEvent("tool_call", {
-                  toolName: modelStep.toolName,
-                  input: redactSensitiveData(modelStep.input),
-                }),
-              ),
-            );
-
-            if (requiresConfirmation(modelStep.toolName, modelStep.input)) {
+            if (needsConfirm) {
               controller.enqueue(
                 encoder.encode(
                   toSseEvent("confirmation_required", {
-                    toolName: modelStep.toolName,
+                    toolName: needsConfirm.toolName,
                     message:
                       "this action can modify live store data. resend with input.confirmed=true to proceed.",
                   }),
@@ -287,7 +344,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
               workingConversation.push({
                 role: "assistant",
-                content: `confirmation_required:${modelStep.toolName}`,
+                content: `confirmation_required:${needsConfirm.toolName}`,
               });
 
               const messagesToPersist = workingConversation
@@ -303,7 +360,7 @@ export async function POST(request: NextRequest): Promise<Response> {
                   toSseEvent("done", {
                     status: "requires_confirmation",
                     conversationId,
-                    toolName: modelStep.toolName,
+                    toolName: needsConfirm.toolName,
                   }),
                 ),
               );
@@ -311,57 +368,64 @@ export async function POST(request: NextRequest): Promise<Response> {
               return;
             }
 
-            const toolResult = await executeTool(
-              modelStep.toolName,
-              modelStep.input,
+            // Execute all tool calls in parallel
+            const results = await Promise.all(
+              toolCalls.map(async (call) => {
+                const toolResult = await executeTool(call.toolName, call.input);
+
+                await appendToolExecutionLog({
+                  conversationId,
+                  toolName: call.toolName,
+                  input: call.input,
+                  result: toolResult,
+                });
+
+                if (WRITE_TOOLS.has(call.toolName)) {
+                  completedWriteTools.push(call.toolName);
+                }
+
+                const redactedToolResult: StructuredToolResult<unknown> = {
+                  ...toolResult,
+                  data: redactSensitiveData(toolResult.data),
+                  error: redactSensitiveData(toolResult.error),
+                };
+
+                controller.enqueue(
+                  encoder.encode(
+                    toSseEvent("tool_result", { result: redactedToolResult }),
+                  ),
+                );
+
+                return { call, toolResult };
+              }),
             );
 
-            await appendToolExecutionLog({
-              conversationId,
-              toolName: modelStep.toolName,
-              input: modelStep.input,
-              result: toolResult,
-            });
-
-            if (WRITE_TOOLS.has(modelStep.toolName)) {
-              completedWriteTools.push(modelStep.toolName);
+            // Add all tool call/result pairs to conversation
+            for (const { call, toolResult } of results) {
+              workingConversation.push({
+                role: "assistant",
+                content: `tool_call:${call.toolName}:${JSON.stringify(call.input)}`,
+              });
+              workingConversation.push(asToolMessage(toolResult));
             }
-
-            const redactedToolResult: StructuredToolResult<unknown> = {
-              ...toolResult,
-              data: redactSensitiveData(toolResult.data),
-              error: redactSensitiveData(toolResult.error),
-            };
-
-            controller.enqueue(
-              encoder.encode(
-                toSseEvent("tool_result", {
-                  result: redactedToolResult,
-                }),
-              ),
-            );
-
-            workingConversation.push({
-              role: "assistant",
-              content: `tool_call:${modelStep.toolName}`,
-            });
-            workingConversation.push(asToolMessage(toolResult));
             continue;
           }
 
-          // Stream tokens
-          const tokens = modelStep.response.split(" ");
+          // At this point modelStep.kind must be "final"
+          const finalStep = modelStep as { kind: "final"; response: string };
+
+          // Stream tokens (minimal delay to keep UI responsive without wasting compute)
+          const tokens = finalStep.response.split(" ");
 
           for (const token of tokens) {
             controller.enqueue(
               encoder.encode(toSseEvent("token", { text: `${token} ` })),
             );
-            await new Promise((resolve) => setTimeout(resolve, 15));
           }
 
           workingConversation.push({
             role: "assistant",
-            content: modelStep.response,
+            content: finalStep.response,
           });
 
           const messagesToPersist = workingConversation

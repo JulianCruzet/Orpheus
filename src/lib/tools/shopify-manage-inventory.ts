@@ -109,7 +109,22 @@ function mockUpdateResult(
   };
 }
 
+interface ShopifyShopResponse {
+  shop: { primary_location_id: number };
+}
+
 async function getFirstLocationId(client: ShopifyClient): Promise<number> {
+  // Prefer /shop.json which only needs read_products scope.
+  // /locations.json requires the read_locations scope which may not be granted.
+  try {
+    const shopResponse = await client.request<ShopifyShopResponse>("/shop.json");
+    if (shopResponse.shop?.primary_location_id) {
+      return shopResponse.shop.primary_location_id;
+    }
+  } catch {
+    // fall through to /locations.json
+  }
+
   const response = await client.request<ShopifyLocationsResponse>("/locations.json");
   const active = response.locations.find((l) => l.active) ?? response.locations[0];
   if (!active) throw new Error("No locations found in Shopify store.");
@@ -126,12 +141,19 @@ async function getInventoryItemIdFromProduct(
   const first = response.product.variants[0];
   if (!first) throw new Error(`No variants found for product ${productId}.`);
 
-  // Enable inventory tracking if not already set
+  // Enable inventory tracking if not already set.
+  // Without this, Shopify won't track stock and set.json silently fails.
   if (first.inventory_management !== "shopify") {
-    await client.request(`/variants/${first.id}.json`, {
-      method: "PUT",
-      body: { variant: { id: first.id, inventory_management: "shopify" } },
-    });
+    const updated = await client.request<{ variant: { inventory_management: string | null } }>(
+      `/variants/${first.id}.json`,
+      {
+        method: "PUT",
+        body: { variant: { id: first.id, inventory_management: "shopify" } },
+      },
+    );
+    if (updated.variant?.inventory_management !== "shopify") {
+      throw new Error(`Failed to enable inventory tracking for product ${productId}.`);
+    }
   }
 
   return first.inventory_item_id;
@@ -212,21 +234,26 @@ export async function shopifyManageInventory(
     return { status: "success", message: `returned ${levels.length} mock inventory level(s).`, data: levels };
   }
 
+  let stepDescription = "initializing";
   try {
     const client = createShopifyClientFromEnv();
 
     // Resolve inventory item ID from product if needed
+    stepDescription = "resolving product to inventory item";
     const inventoryItemId = input.inventoryItemId
       ?? await getInventoryItemIdFromProduct(client, input.productId as number);
 
     // Auto-fetch location ID if not provided
+    stepDescription = "fetching store location";
     const locationId = input.locationId ?? await getFirstLocationId(client);
 
     if (action === "update") {
+      stepDescription = "setting inventory level";
       const updated = await updateInventoryLevel(client, inventoryItemId, locationId, input.available as number);
-      return { status: "success", message: "updated shopify inventory level.", data: updated };
+      return { status: "success", message: `updated stock to ${input.available} units.`, data: updated };
     }
 
+    stepDescription = "reading inventory level";
     const level = await readInventoryLevel(client, inventoryItemId, locationId);
 
     if (!level) {
@@ -237,13 +264,14 @@ export async function shopifyManageInventory(
       };
     }
 
-    return { status: "success", message: "fetched shopify inventory level.", data: level };
+    return { status: "success", message: `current stock: ${level.available} units.`, data: level };
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[shopify_manage_inventory] failed at step: ${stepDescription}`, details);
     return {
       status: "error",
-      message: "unable to manage inventory right now.",
-      error: { code: "SHOPIFY_MANAGE_INVENTORY_FAILED", details },
+      message: `inventory ${action} failed while ${stepDescription}: ${details}`,
+      error: { code: "SHOPIFY_MANAGE_INVENTORY_FAILED", details: `step=${stepDescription}: ${details}` },
     };
   }
 }
