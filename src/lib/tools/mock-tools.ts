@@ -15,10 +15,7 @@ const success = <TData>(message: string, data: TData): ToolExecutionResult<TData
 
 const mockHandlers: Record<string, MockToolHandler> = {
   shopify_list_products: async () =>
-    success("mock mode: returned seeded product catalog.", {
-      products: SEEDED_PRODUCTS,
-      source: "mock",
-    }),
+    success("mock mode: returned seeded product catalog.", SEEDED_PRODUCTS),
 
   shopify_create_product: async (input) => {
     const payload = (input as Record<string, unknown>) ?? {};
@@ -60,10 +57,7 @@ const mockHandlers: Record<string, MockToolHandler> = {
   },
 
   shopify_manage_orders: async () =>
-    success("mock mode: returned seeded orders.", {
-      orders: SEEDED_ORDERS,
-      source: "mock",
-    }),
+    success("mock mode: returned seeded orders.", SEEDED_ORDERS),
 
   generate_product_listing: async (input) => {
     const payload = (input as Record<string, unknown>) ?? {};

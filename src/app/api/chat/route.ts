@@ -93,7 +93,7 @@ function stripBinaryData(data: unknown): unknown {
   const obj = data as Record<string, unknown>;
   const result: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(obj)) {
-    if (key === "base64Data" || key === "imageUrl" || key === "attachment") {
+    if (key === "base64Data" || key === "attachment") {
       result[key] = "[binary omitted]";
     } else {
       result[key] = stripBinaryData(val);

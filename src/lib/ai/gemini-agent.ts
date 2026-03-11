@@ -36,10 +36,18 @@ const SYSTEM_PROMPT = `you are shams-e, an ecommerce copilot. you help users bui
 behavior:
 - be action-first: when you have enough information to call a tool, call it immediately — do not re-explain or ask for confirmation unless the action is destructive.
 - follow-through rule: if you asked the user a question and they answered it, call the relevant tool immediately. never ignore a direct answer to your own question.
-- chain tools when needed (e.g., generate listing → create product). call multiple tools in one turn when they are independent.
+- chain tools when needed. call multiple tools in one turn when they are independent.
+- CRITICAL: after tool results come back, check if the user's FULL request is done. if not, call the NEXT tool in the chain. do NOT stop and summarize until everything the user asked for is complete.
 - for destructive actions (update product, manage inventory), always call with confirmed=true since the system handles confirmation separately.
 - if you're unsure what the user wants, ask a clarifying question instead of guessing.
-- after tool results come back, summarize what happened in plain language.
+- after ALL tool calls in the pipeline are complete, summarize everything that happened in plain language.
+
+full pipeline example — "create a graphic, put it on a hoodie, upload to shopify at $29.99 with 10 in stock":
+1. generate_product_image (create the artwork) → get imageId and imageUrl
+2. printify_generate_mockups (put artwork on hoodie, pass imageId from step 1) → get mockupUrls
+3. shopify_create_product (create listing with title, price, status='active', imageUrls from step 2) → get product id
+4. shopify_manage_inventory (set stock to 10, action='update', productId from step 3, available=10)
+you MUST complete ALL steps the user asked for. do NOT stop after image generation.
 
 CRITICAL FIRST RULE — existing product check:
 - when the user mentions a product by name (e.g. 'the hoodie', 'sunset mug', 'flag hoodie'), your FIRST tool call MUST be shopify_list_products to look it up. this applies to ALL requests about existing products: marketing, updates, inventory, campaigns, etc.
@@ -56,9 +64,13 @@ marketing campaign rule — for instagram campaigns, ads, or promotional content
 tool selection rules:
 - product lookup rule: shopify_update_product and shopify_manage_inventory require a numeric productId. if the user refers to a product by name, first call shopify_list_products to find its ID, then immediately call the update/inventory tool with that ID.
 - upload to shopify rule: when the user says 'upload to shopify', 'add to shopify', or 'put it on shopify' — they want shopify_create_product called with the product details you already know. if you need a price, ask once then act immediately on their answer.
-- generate_product_image: ONLY for creating NEW logos and artwork. never for existing products.
-- printify_generate_mockups: ONLY for creating NEW physical product mockups. never for existing products.
-- shopify_create_product: create a new shopify listing. always pass status='active'. ALWAYS call generate_product_listing first to get a professional title, description, and tags.
+- CRITICAL image vs listing distinction:
+  - generate_product_image: use when the user asks to "generate an image", "create a graphic", "make a logo", "design artwork", or anything involving VISUAL content. this creates an actual image file.
+  - generate_product_listing: use when the user asks for product COPY — titles, descriptions, tags, SEO text, pricing suggestions. this generates TEXT, not images.
+  - when the user says "generate" or "create" with words like "image", "photo", "graphic", "logo", "artwork", "design" → always use generate_product_image FIRST.
+  - when the user says "generate" or "create" with words like "listing", "copy", "description", "title" → use generate_product_listing.
+- printify_generate_mockups: for placing artwork onto physical products (t-shirts, hoodies, mugs). chain after generate_product_image if artwork is needed first.
+- shopify_create_product: create a new shopify listing. always pass status='active'. optionally call generate_product_listing first for professional copy, but NOT when the user already provided product details.
 - shopify_update_product: change price, title, description, or tags. requires productId — look it up first if not known.
 - shopify_manage_inventory: read or update stock levels.
 - generate_marketing_copy: captions, email campaigns, ads, promotional content. always pass the specific platforms array (e.g. ["instagram"]). do not default to all platforms unless the user asks for multiple.
@@ -220,6 +232,7 @@ const TOOL_GROUPS: Record<string, string[]> = {
 // Always available so the model can chain across groups.
 const ALWAYS_AVAILABLE = new Set([
   "shopify_list_products", "shopify_create_product", "generate_product_listing",
+  "generate_product_image", "printify_generate_mockups", "shopify_manage_inventory",
 ]);
 
 function pickRelevantTools(conversation: ChatMessage[]): string[] | undefined {
@@ -352,14 +365,19 @@ export async function geminiRespond(
     // still letting the model summarize when it's ready.
     const hasToolResults = conversation.some((m) => m.role === "tool");
 
-    const toolConfig = allowedTools
+    // Gemini API only allows allowedFunctionNames with ANY mode.
+    // On the first pass (no tool results yet), use ANY + allowedFunctionNames to force a tool call.
+    // On subsequent passes, use AUTO without allowedFunctionNames so the model can chain or summarize.
+    const toolConfig = allowedTools && !hasToolResults
       ? {
           functionCallingConfig: {
-            mode: hasToolResults ? FunctionCallingMode.AUTO : FunctionCallingMode.ANY,
+            mode: FunctionCallingMode.ANY,
             allowedFunctionNames: allowedTools,
           },
         }
-      : undefined;
+      : hasToolResults
+        ? { functionCallingConfig: { mode: FunctionCallingMode.AUTO } }
+        : undefined;
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
@@ -438,13 +456,34 @@ function fallbackRespond(conversation: ChatMessage[]): AgentStep {
 
   const text = lastUser.content.toLowerCase();
 
+  // Image / artwork generation — check BEFORE product matching
+  if ((text.includes("image") || text.includes("graphic") || text.includes("logo") || text.includes("artwork") || text.includes("design") || text.includes("photo")) &&
+      (text.includes("generate") || text.includes("create") || text.includes("make") || text.includes("design"))) {
+    return {
+      kind: "tool_call",
+      toolName: "generate_product_image",
+      input: { prompt: lastUser.content },
+      thought: "generating your image.",
+    };
+  }
+
+  // Mockup — t-shirt, hoodie, mug etc.
+  if (text.includes("mockup") || text.includes("t-shirt") || text.includes("tshirt") || text.includes("hoodie") || text.includes("mug") || text.includes("merch")) {
+    return {
+      kind: "tool_call",
+      toolName: "printify_generate_mockups",
+      input: { productTitle: lastUser.content, productType: "tshirt" },
+      thought: "creating your product mockup.",
+    };
+  }
+
   // Products — broad matching
   if (text.includes("product") || text.includes("catalog") || text.includes("listing") || text.includes("store items")) {
     if (text.includes("create") || text.includes("new") || text.includes("add") || text.includes("draft") || text.includes("generate")) {
       return {
         kind: "tool_call",
         toolName: "generate_product_listing",
-        input: { prompt: lastUser.content },
+        input: { productName: lastUser.content },
         thought: "i'll generate product copy first.",
       };
     }

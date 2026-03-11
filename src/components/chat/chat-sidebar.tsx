@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { useVoiceInput } from "@/hooks/use-voice-input";
+import { VoiceButton } from "@/components/chat/voice-button";
 
 function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   useEffect(() => {
@@ -94,6 +96,12 @@ export function ChatSidebar({
     },
   ]);
   const [draft, setDraft] = useState("");
+  const sendRef = useRef<(text: string) => void>(undefined);
+  const { voiceState, toggleRecording } = useVoiceInput(
+    useCallback((text: string) => {
+      if (text && sendRef.current) sendRef.current(text);
+    }, []),
+  );
   const [isStreaming, setIsStreaming] = useState(false);
   const [tools, setTools] = useState<ToolActivity[]>([]);
   const [confirmation, setConfirmation] = useState<ConfirmationState>(null);
@@ -322,6 +330,18 @@ export function ChatSidebar({
     },
     [conversationId, onDashboardRefresh],
   );
+
+  // Wire voice auto-submit to the same flow as handleQuickPrompt
+  sendRef.current = (text: string) => {
+    if (!text.trim() || isStreaming) return;
+    setDraft("");
+    setMessages((prev) => [
+      ...prev,
+      { id: `user-${Date.now()}`, role: "user", content: text },
+    ]);
+    setTools([]);
+    sendToApi(text);
+  };
 
   function handleNewChat() {
     setMessages([
@@ -612,7 +632,12 @@ export function ChatSidebar({
             onChange={(e) => setDraft(e.target.value)}
             disabled={isStreaming}
             style={{ paddingLeft: "16px" }}
-            className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pr-20 text-[13px] outline-none transition placeholder:text-white/20 focus:border-[#5EEAD4]/30 disabled:opacity-50"
+            className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pr-24 text-[13px] outline-none transition placeholder:text-white/20 focus:border-[#5EEAD4]/30 disabled:opacity-50"
+          />
+          <VoiceButton
+            state={voiceState}
+            onClick={toggleRecording}
+            disabled={isStreaming}
           />
           <button
             type="submit"

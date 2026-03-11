@@ -96,7 +96,7 @@ export async function generateProductImage(
     const composedPrompt = `${normalizedPrompt}, ${styleHint(style)}, clipart style, flat vector illustration, transparent background, no background, PNG with alpha channel, clean edges, high quality`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,8 +136,11 @@ export async function generateProductImage(
     const removeBgKey = process.env.REMOVE_BG_API_KEY?.trim();
     if (removeBgKey) {
       try {
+        const imageBuffer = Buffer.from(base64Data, "base64");
+        const blob = new Blob([imageBuffer], { type: mimeType });
+
         const formData = new FormData();
-        formData.append("image_file_b64", base64Data);
+        formData.append("image_file", blob, "image.png");
         formData.append("size", "auto");
 
         const bgRes = await fetch("https://api.remove.bg/v1.0/removebg", {
