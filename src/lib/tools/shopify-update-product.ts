@@ -2,12 +2,15 @@ import { createShopifyClientFromEnv, ShopifyClient } from "@/lib/shopify/client"
 import { ToolExecutionResult } from "@/lib/tools/types";
 
 export interface ShopifyUpdateProductInput {
-  id: number;
+  id?: number;
+  productId?: string | number;
   title?: string;
   bodyHtml?: string;
+  description?: string;      // alias for bodyHtml (Gemini may send this)
   tags?: string[];
   status?: "active" | "draft" | "archived";
   vendor?: string;
+  price?: number;
 }
 
 interface ShopifyUpdateProductResponse {
@@ -56,7 +59,7 @@ function isMockModeEnabled(): boolean {
 
 function hasUpdatableFields(input: ShopifyUpdateProductInput): boolean {
   return Boolean(
-    input.title ?? input.bodyHtml ?? input.status ?? input.vendor ?? input.tags,
+    input.title ?? input.bodyHtml ?? input.status ?? input.vendor ?? input.tags ?? input.price,
   );
 }
 
@@ -69,6 +72,7 @@ function normalizePayload(input: ShopifyUpdateProductInput): Record<string, unkn
       ...(input.status ? { status: input.status } : {}),
       ...(input.vendor ? { vendor: input.vendor } : {}),
       ...(input.tags ? { tags: input.tags.join(", ") } : {}),
+      ...(input.price != null ? { variants: [{ price: input.price.toFixed(2) }] } : {}),
     },
   };
 }
@@ -144,7 +148,16 @@ async function updateProduct(
 export async function shopifyUpdateProduct(
   input: ShopifyUpdateProductInput,
 ): Promise<ToolExecutionResult<ShopifyUpdateProductOutput>> {
-  if (!Number.isFinite(input?.id) || input.id <= 0) {
+  // Normalize productId → id (schema sends productId, handler expects id)
+  if (!input.id && input.productId != null) {
+    input.id = typeof input.productId === "string" ? parseInt(input.productId, 10) : input.productId;
+  }
+  // Normalize description → bodyHtml
+  if (!input.bodyHtml && input.description) {
+    input.bodyHtml = input.description;
+  }
+
+  if (!Number.isFinite(input?.id) || (input.id as number) <= 0) {
     return {
       status: "error",
       message: "a valid product id is required.",
@@ -166,7 +179,7 @@ export async function shopifyUpdateProduct(
 
   if (isMockModeEnabled()) {
     const product = {
-      id: input.id,
+      id: input.id as number,
       title: input.title ?? "Mock Product",
       body_html: input.bodyHtml,
       status: input.status ?? "active",
@@ -182,7 +195,7 @@ export async function shopifyUpdateProduct(
         undo: {
           tool: "shopify_update_product",
           input: {
-            id: input.id,
+            id: input.id as number,
             title: "Mock Product",
             bodyHtml: "Mock description",
             status: "active",
@@ -197,7 +210,7 @@ export async function shopifyUpdateProduct(
 
   try {
     const client = createShopifyClientFromEnv();
-    const previous = await getProduct(client, input.id);
+    const previous = await getProduct(client, input.id as number);
     const product = await updateProduct(client, input);
     const undoInput = buildUndoPayload(previous, input);
 

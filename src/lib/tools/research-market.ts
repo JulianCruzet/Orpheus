@@ -1,7 +1,8 @@
 import { ToolExecutionResult } from "@/lib/tools/types";
 
 export interface ResearchMarketInput {
-  niche: string;
+  niche?: string;
+  query?: string;    // alias — schema sends `query`, handler expects `niche`
   region?: string;
   targetAudience?: string;
   productType?: string;
@@ -49,6 +50,14 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function normalizeInput(input: ResearchMarketInput): ResearchMarketInput {
+  // Schema sends `query`, handler expects `niche` — normalize
+  if (!input.niche && input.query) {
+    input.niche = input.query;
+  }
+  return input;
+}
+
 function validateInput(input: ResearchMarketInput): ToolExecutionResult<never> | null {
   if (!input || typeof input !== "object") {
     return {
@@ -61,7 +70,7 @@ function validateInput(input: ResearchMarketInput): ToolExecutionResult<never> |
     };
   }
 
-  if (typeof input.niche !== "string" || input.niche.trim().length === 0) {
+  if (typeof input.niche !== "string" || (input.niche ?? "").trim().length === 0) {
     return {
       status: "error",
       message: "niche is required.",
@@ -76,7 +85,7 @@ function validateInput(input: ResearchMarketInput): ToolExecutionResult<never> |
 }
 
 function buildMockOutput(input: ResearchMarketInput): ResearchMarketOutput {
-  const niche = input.niche.trim();
+  const niche = (input.niche ?? "").trim();
   const region = input.region?.trim() || "north america";
   const audience = input.targetAudience?.trim() || "online-first shoppers";
 
@@ -208,7 +217,7 @@ async function researchWithGemini(
 }
 
 function buildCachedBackupOutput(input: ResearchMarketInput): ResearchMarketOutput {
-  const niche = input.niche.trim();
+  const niche = (input.niche ?? "").trim();
 
   return {
     nicheSummary: `${niche} demand is stable with improving conversion potential when paired with social proof and creator-led content.`,
@@ -240,6 +249,7 @@ function buildCachedBackupOutput(input: ResearchMarketInput): ResearchMarketOutp
 export async function researchMarket(
   input: ResearchMarketInput,
 ): Promise<ToolExecutionResult<ResearchMarketOutput>> {
+  normalizeInput(input);
   const validationError = validateInput(input);
   if (validationError) {
     return validationError;
@@ -250,7 +260,7 @@ export async function researchMarket(
   if (mockMode) {
     return {
       status: "success",
-      message: `market research generated for "${input.niche.trim()}" (mock mode).`,
+      message: `market research generated for "${(input.niche ?? "").trim()}" (mock mode).`,
       data: buildMockOutput(input),
     };
   }
@@ -260,7 +270,7 @@ export async function researchMarket(
 
     return {
       status: "success",
-      message: `market research generated for "${input.niche.trim()}".`,
+      message: `market research generated for "${(input.niche ?? "").trim()}".`,
       data: output,
     };
   } catch (error) {

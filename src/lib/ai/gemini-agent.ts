@@ -86,7 +86,22 @@ formatting:
 
   **twitter**
   (tweet text here)
-- never dump raw JSON to the user. translate tool results into clean, readable summaries.`;
+- never dump raw JSON to the user. translate tool results into clean, readable summaries.
+- when summarizing tool results, lead with the outcome ("done — created your product"), then show the key details. keep it under 4-5 lines unless the user asked for detail.
+- when showing product listings from generate_product_listing, format as:
+  **title:** (title)
+  **description:** (description)
+  **tags:** tag1, tag2, tag3
+  **suggested price:** $X.XX
+  **seo title:** (meta title)
+- when showing market research, format as:
+  **summary:** (niche summary)
+  **pricing range:** $min — $max
+  **top keywords:** keyword1, keyword2, keyword3
+  **trend:** (direction)
+  **opportunity score:** X/100
+  **recommendation:** (recommendation)
+- when a tool fails, tell the user what went wrong in plain language and suggest what to try next. never show error codes.`;
 
 function convertRole(role: string): "user" | "model" | "function" {
   if (role === "assistant") return "model";
@@ -330,15 +345,17 @@ export async function geminiRespond(
 
     const allowedTools = pickRelevantTools(conversation);
 
-    // If the conversation already has tool results, the model should be free
-    // to summarize (AUTO).  Only force tool calls (ANY) on the first pass
-    // when there are no tool results yet and we have a clear intent match.
+    // Force a tool call (ANY) on the first pass when we have a clear intent
+    // match and no tool results yet.  On subsequent iterations keep the same
+    // tool subset available but let the model decide whether to call one or
+    // respond with text (AUTO) — this allows proper multi-step chaining while
+    // still letting the model summarize when it's ready.
     const hasToolResults = conversation.some((m) => m.role === "tool");
 
-    const toolConfig = allowedTools && !hasToolResults
+    const toolConfig = allowedTools
       ? {
           functionCallingConfig: {
-            mode: FunctionCallingMode.ANY,
+            mode: hasToolResults ? FunctionCallingMode.AUTO : FunctionCallingMode.ANY,
             allowedFunctionNames: allowedTools,
           },
         }

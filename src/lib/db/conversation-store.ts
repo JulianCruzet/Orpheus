@@ -60,12 +60,20 @@ export async function saveConversationMessages(
 ): Promise<void> {
   await mkdir(DATA_DIR, { recursive: true });
 
-  const existingMessages = await loadConversationMessages(conversationId);
+  // Preserve original createdAt if the conversation already exists
+  let existingCreatedAt: string | null = null;
+  try {
+    const raw = await readFile(getConversationPath(conversationId), "utf8");
+    const parsed = JSON.parse(raw) as ConversationRecord;
+    existingCreatedAt = parsed.createdAt ?? null;
+  } catch {
+    // File doesn't exist yet — this is a new conversation
+  }
 
   const record: ConversationRecord = {
     id: conversationId,
     messages,
-    createdAt: existingMessages.length > 0 ? nowIso() : nowIso(),
+    createdAt: existingCreatedAt ?? nowIso(),
     updatedAt: nowIso(),
   };
 

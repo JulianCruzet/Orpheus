@@ -40,9 +40,9 @@ export interface ShopifyOrderDetail extends ShopifyOrderSummary {
 }
 
 export interface ShopifyManageOrdersInput {
-  action?: "list" | "detail";
+  action?: "list" | "detail" | "get";  // schema sends "get", normalize to "detail"
   limit?: number;
-  orderId?: number;
+  orderId?: number | string;
 }
 
 type ShopifyOrder = {
@@ -181,7 +181,7 @@ function validateInput(input: ShopifyManageOrdersInput): ToolExecutionResult<nev
   }
 
   if (action === "detail") {
-    if (!Number.isFinite(input.orderId) || (input.orderId ?? 0) <= 0) {
+    if (!Number.isFinite(input.orderId as number) || ((input.orderId as number) ?? 0) <= 0) {
       return {
         status: "error",
         message: "orderId is required for detail action.",
@@ -277,6 +277,14 @@ function mockOrderDetail(orderId: number): ShopifyOrderDetail {
 export async function shopifyManageOrders(
   input: ShopifyManageOrdersInput = {},
 ): Promise<ToolExecutionResult<ShopifyOrderSummary[] | ShopifyOrderDetail>> {
+  // Schema sends "get", handler expects "detail" — normalize
+  if (input.action === "get") {
+    input.action = "detail";
+  }
+  // Normalize string orderId to number
+  if (typeof input.orderId === "string") {
+    input.orderId = parseInt(input.orderId, 10);
+  }
   const validationError = validateInput(input);
   if (validationError) {
     return validationError;

@@ -251,6 +251,18 @@ export async function POST(request: NextRequest): Promise<Response> {
 
         const restoredConversation = mergeMessages(existingMessages, body.messages);
 
+        // Detect confirmation messages (e.g. "confirm shopify_update_product")
+        // and track which tools the user has approved so we can auto-inject
+        // confirmed=true when the model re-calls the tool.
+        const confirmedTools = new Set<string>();
+        const lastMsg = restoredConversation[restoredConversation.length - 1];
+        if (lastMsg && lastMsg.role === "user") {
+          const confirmMatch = lastMsg.content.match(/^confirm\s+(\S+)$/i);
+          if (confirmMatch) {
+            confirmedTools.add(confirmMatch[1]);
+          }
+        }
+
         const workingConversation: ChatMessage[] = [
           systemPrompt,
           ...restoredConversation,
@@ -324,6 +336,13 @@ export async function POST(request: NextRequest): Promise<Response> {
                   }),
                 ),
               );
+            }
+
+            // Auto-inject confirmed=true for tools the user already approved
+            for (const call of toolCalls) {
+              if (DESTRUCTIVE_TOOLS.has(call.toolName) && confirmedTools.has(call.toolName)) {
+                call.input = { ...call.input, confirmed: true };
+              }
             }
 
             // Check if any call requires confirmation

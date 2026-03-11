@@ -4,6 +4,7 @@ import { ToolExecutionResult } from "@/lib/tools/types";
 export interface ShopifyCreateProductInput {
   title: string;
   descriptionHtml?: string;
+  description?: string;    // alias — Gemini sends this from schema
   vendor?: string;
   productType?: string;
   tags?: string[];
@@ -154,6 +155,11 @@ export async function shopifyCreateProduct(
   const validationError = validateInput(input);
   if (validationError) {
     return validationError;
+  }
+
+  // Normalize description → descriptionHtml (schema sends `description`)
+  if (!input.descriptionHtml && input.description) {
+    input.descriptionHtml = input.description;
   }
 
   if (isMockModeEnabled()) {

@@ -556,8 +556,13 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={() => {
+                    const toolName = confirmation.toolName;
                     setConfirmation(null);
-                    sendToApi(`confirm ${confirmation.toolName}`);
+                    setMessages((prev) => [
+                      ...prev,
+                      { id: `user-${Date.now()}`, role: "user", content: "confirmed, go ahead." },
+                    ]);
+                    sendToApi(`confirm ${toolName}`);
                   }}
                   className="rounded-md bg-amber-400/20 px-3 py-1 text-[11px] font-medium text-amber-200 transition hover:bg-amber-400/30"
                 >

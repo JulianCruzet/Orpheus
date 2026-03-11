@@ -1,7 +1,8 @@
 import { ToolExecutionResult } from "@/lib/tools/types";
 
 export interface ResearchCompetitorsInput {
-  niche: string;
+  niche?: string;
+  query?: string;    // alias — schema sends `query`, handler expects `niche`
   region?: string;
   targetAudience?: string;
   productType?: string;
@@ -80,7 +81,7 @@ function validateInput(
 function buildMockOutput(
   input: ResearchCompetitorsInput,
 ): ResearchCompetitorsOutput {
-  const niche = input.niche.trim();
+  const niche = (input.niche ?? input.query ?? "").trim();
   const competitorCount = Math.max(3, Math.min(6, input.competitorCount ?? 4));
   const basePrice = niche.length > 18 ? 42 : 28;
 
@@ -251,6 +252,10 @@ async function researchWithGemini(
 export async function researchCompetitors(
   input: ResearchCompetitorsInput,
 ): Promise<ToolExecutionResult<ResearchCompetitorsOutput>> {
+  // Schema sends `query`, handler expects `niche` — normalize
+  if (!input.niche && input.query) {
+    input.niche = input.query;
+  }
   const validationError = validateInput(input);
   if (validationError) {
     return validationError;
@@ -263,7 +268,7 @@ export async function researchCompetitors(
 
     return {
       status: "success",
-      message: `competitor research generated for "${input.niche.trim()}".`,
+      message: `competitor research generated for "${(input.niche ?? "").trim()}".`,
       data: output,
     };
   } catch (error) {

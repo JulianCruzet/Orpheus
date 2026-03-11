@@ -78,6 +78,15 @@ function validateInput(
 export async function analyzeStorePerformance(
   input: AnalyzeStorePerformanceInput,
 ): Promise<ToolExecutionResult<AnalyzeStorePerformanceOutput>> {
+  // Default missing numeric fields to 0 so the tool works even when
+  // Gemini calls it without explicit revenue/order data.
+  if (typeof input.revenueLast30d !== "number" || !Number.isFinite(input.revenueLast30d)) {
+    input.revenueLast30d = 0;
+  }
+  if (typeof input.ordersLast30d !== "number" || !Number.isFinite(input.ordersLast30d)) {
+    input.ordersLast30d = 0;
+  }
+
   const validationError = validateInput(input);
   if (validationError) {
     return validationError;
