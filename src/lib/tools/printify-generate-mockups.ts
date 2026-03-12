@@ -112,7 +112,14 @@ async function uploadImage(
   return result.id;
 }
 
-async function getFirstPrintProvider(blueprintId: number): Promise<number> {
+/**
+ * Select the print provider with the most mockup-image variety.
+ * More mockup images usually means the provider includes lifestyle /
+ * model shots alongside flat-lay product photos.
+ * Falls back to the first provider when the catalog endpoint is
+ * unavailable or returns nothing useful.
+ */
+async function selectPrintProvider(blueprintId: number): Promise<number> {
   const providers = await printifyRequest<PrintifyPrintProvider[]>(
     `/catalog/blueprints/${blueprintId}/print_providers.json`,
   );
@@ -121,7 +128,26 @@ async function getFirstPrintProvider(blueprintId: number): Promise<number> {
     throw new Error(`No print providers found for blueprint ${blueprintId}.`);
   }
 
-  return providers[0].id;
+  // Check up to 5 providers for mockup variety
+  const candidates = providers.slice(0, 5);
+  let bestId = candidates[0].id;
+  let bestCount = 0;
+
+  for (const p of candidates) {
+    try {
+      const mockups = await printifyRequest<unknown[]>(
+        `/catalog/blueprints/${blueprintId}/print_providers/${p.id}/mockup-images.json`,
+      );
+      if (Array.isArray(mockups) && mockups.length > bestCount) {
+        bestCount = mockups.length;
+        bestId = p.id;
+      }
+    } catch {
+      // Endpoint may not exist for this provider — skip
+    }
+  }
+
+  return bestId;
 }
 
 async function getDefaultVariantIds(
@@ -178,6 +204,30 @@ async function createPrintifyProduct(
   );
 }
 
+/**
+ * Printify generates mockup images asynchronously. If the initial product
+ * response has fewer than 2 images, poll a few times to let them render.
+ */
+async function fetchMockupUrls(
+  shopId: string,
+  productId: string,
+  initialUrls: string[],
+  maxRetries = 3,
+): Promise<string[]> {
+  if (initialUrls.length >= 2) return initialUrls;
+
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const product = await printifyRequest<PrintifyProductResponse>(
+      `/shops/${shopId}/products/${productId}.json`,
+    );
+    const urls = product.images.filter((img) => img.src).map((img) => img.src);
+    if (urls.length >= 2) return urls;
+  }
+
+  return initialUrls;
+}
+
 export async function printifyGenerateMockups(
   input: PrintifyGenerateMockupsInput,
 ): Promise<ToolExecutionResult<PrintifyMockupsOutput>> {
@@ -224,7 +274,7 @@ export async function printifyGenerateMockups(
       `${input.productTitle.trim().toLowerCase().replace(/\s+/g, "-")}.png`,
     );
 
-    const printProviderId = await getFirstPrintProvider(blueprintId);
+    const printProviderId = await selectPrintProvider(blueprintId);
     const variantIds = await getDefaultVariantIds(blueprintId, printProviderId);
 
     const product = await createPrintifyProduct(
@@ -236,7 +286,8 @@ export async function printifyGenerateMockups(
       uploadedImageId,
     );
 
-    const mockupUrls = product.images.map((img) => img.src);
+    const initialUrls = product.images.map((img) => img.src);
+    const mockupUrls = await fetchMockupUrls(shopId, product.id, initialUrls);
 
     return {
       status: "success",

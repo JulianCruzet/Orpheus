@@ -6,6 +6,16 @@ import ReactMarkdown from "react-markdown";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { VoiceButton } from "@/components/chat/voice-button";
 
+function extractImageUrls(text: string): { cleaned: string; images: string[] } {
+  const imageUrlPattern = /(https?:\/\/[^\s)]+\.(?:png|jpg|jpeg|gif|webp)(?:\?[^\s)]*)?|https?:\/\/images\.printify\.com\/[^\s)]+|\/api\/images\/[^\s)]+)/gi;
+  const images: string[] = [];
+  const cleaned = text.replace(imageUrlPattern, (match) => {
+    images.push(match);
+    return '';
+  }).replace(/\n{3,}/g, '\n\n').trim();
+  return { cleaned, images };
+}
+
 function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -455,17 +465,35 @@ export function ChatSidebar({
                 className={`py-2 ${msg.role === "user" ? "flex justify-end" : ""}`}
               >
                 {msg.role === "assistant" ? (
+                  (() => {
+                    const { cleaned, images: extractedImages } = extractImageUrls(msg.content);
+                    const allImages = [...(msg.images ?? []), ...extractedImages];
+                    return (
                   <div className="flex gap-3.5">
                     <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#5EEAD4]/10 text-[9px] text-[#5EEAD4]">
                       S
                     </div>
                     <div className="min-w-0">
                       <div className="text-[13px] leading-[1.65] text-white/75 prose-sm prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:text-white/90">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown components={{
+                          img: ({ src, alt }) => (typeof src === 'string') ? (
+                            <img src={src} alt={alt ?? ''} onClick={() => setPreviewSrc(src)}
+                              className="cursor-zoom-in rounded-lg border border-white/10 object-cover transition hover:border-white/30"
+                              style={{ width: '100%', maxWidth: '280px' }} />
+                          ) : null,
+                          a: ({ href, children }) => {
+                            if (href && /\.(png|jpg|jpeg|gif|webp)(\?|$)/i.test(href)) {
+                              return <img src={href} alt={String(children)} onClick={() => setPreviewSrc(href)}
+                                className="cursor-zoom-in rounded-lg border border-white/10 object-cover transition hover:border-white/30"
+                                style={{ width: '100%', maxWidth: '280px' }} />;
+                            }
+                            return <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#5EEAD4] underline">{children}</a>;
+                          }
+                        }}>{cleaned}</ReactMarkdown>
                       </div>
-                      {msg.images && msg.images.length > 0 && (
+                      {allImages.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {msg.images.map((src, i) => (
+                          {allImages.map((src, i) => (
                             <img
                               key={i}
                               src={src}
@@ -479,6 +507,8 @@ export function ChatSidebar({
                       )}
                     </div>
                   </div>
+                    );
+                  })()
                 ) : (
                   <div className="max-w-[85%] rounded-xl bg-white/[0.06] px-3 py-2">
                     <p className="text-[13px] leading-[1.65] text-white/85">
