@@ -9,7 +9,7 @@
   [![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4)](https://ai.google.dev/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-  [Report Bug](https://github.com/shamsharoon/Shams-E/issues) · [Request Feature](https://github.com/shamsharoon/Shams-E/issues)
+  [Report Bug](https://github.com/JulianCruzet/Orpheus/issues) · [Request Feature](https://github.com/JulianCruzet/Orpheus/issues)
 </div>
 
 <div align="center" style="margin: 40px 0;">
@@ -140,7 +140,7 @@ flowchart LR
 
 ```bash
 # Clone the repository
-git clone https://github.com/shamsharoon/Shams-E.git
+git clone https://github.com/JulianCruzet/Orpheus.git
 cd Shams-E
 
 # Install dependencies
@@ -276,11 +276,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 **Team:**
-- Ali Shamsi
 - Julian Cruzet
-- Shams Haroon
+- Ali Shamsi
 
-Project Link: [https://github.com/shamsharoon/Shams-E](https://github.com/shamsharoon/Shams-E)
+Project Link: [https://github.com/JulianCruzet/Orpheus](https://github.com/JulianCruzet/Orpheus)
 
 ---
 
