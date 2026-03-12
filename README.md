@@ -17,6 +17,12 @@
   <p><em>Orpheus — AI-powered e-commerce from a single chat window</em></p>
 </div>
 
+<div align="center">
+  <a href="https://youtu.be/LDryhyT2_u4">
+    <img src="https://img.shields.io/badge/▶️_Watch_Demo_Video-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo Video"/>
+  </a>
+</div>
+
 ---
 
 ## 🎯 Overview
