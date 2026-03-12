@@ -1,0 +1,34 @@
+flowchart LR
+  U[User]
+  UI[Next.js Frontend<br/>Landing + Auth + Chat Workspace]
+  AUTH[Supabase Auth<br/>Signin / Session]
+
+  CHATAPI[api chat<br/>Agent Orchestration]
+  DASHAPI[api dashboard<br/>Dashboard Aggregation]
+
+  AGENT[Gemini Agent Core<br/>Intent + Tool Selection]
+  REG[Tool Registry]
+
+  SHOP[Shopify Admin API]
+  RESEARCH[Market Research Sources]
+  IMG[Image Generation]
+
+  DB[(SQLite + Drizzle<br/>Conversations / Messages / Action Logs)]
+  SAFE[Safety Layer<br/>Confirmations + Redaction + Undo]
+
+  U --> UI
+  UI --> AUTH
+  UI --> CHATAPI
+  UI --> DASHAPI
+
+  CHATAPI --> AGENT --> REG
+  REG --> SHOP
+  REG --> RESEARCH
+  REG --> IMG
+
+  CHATAPI --> DB
+  CHATAPI --> SAFE
+  SAFE --> REG
+
+  DASHAPI --> REG
+  DASHAPI --> DB
