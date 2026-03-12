@@ -283,6 +283,12 @@ Project Link: [https://github.com/JulianCruzet/Orpheus](https://github.com/Julia
 
 ---
 
+## 🙏 Acknowledgments
+
+- **[Claude Code](https://claude.ai/claude-code)** — AI-assisted development by Anthropic
+
+---
+
 <div align="center">
   <sub>Built with ❤️ for merchants who move fast</sub>
 </div>

@@ -264,7 +264,7 @@ export const toolFunctionDeclarations: any[] = [
   {
     name: "printify_generate_mockups",
     description:
-      "Create a physical product mockup (t-shirt, mug, hoodie, etc.) on Printify using uploaded artwork. Use when the user asks for a product mockup, t-shirt, or merch. If no artwork imageId is provided yet, first call generate_product_image to get one, then pass the imageId here.",
+      "Create a physical product mockup (t-shirt, mug, hoodie, etc.) on Printify. MANDATORY for marketing campaigns — generates lifestyle photos of the product being worn/used. For EXISTING products, pass their imageUrl from shopify_list_products. For NEW products, first call generate_product_image, then pass the imageId here.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -286,7 +286,7 @@ export const toolFunctionDeclarations: any[] = [
         },
         imageUrl: {
           type: "STRING",
-          description: "Public URL of the artwork image (alternative to imageId/imageBase64).",
+          description: "Public URL of the product image. For existing Shopify products, use the imageUrl from shopify_list_products. For new products, use the imageUrl from generate_product_image.",
         },
         blueprintId: {
           type: "NUMBER",
@@ -299,7 +299,7 @@ export const toolFunctionDeclarations: any[] = [
   {
     name: "generate_marketing_copy",
     description:
-      "Generate marketing copy for a product: Instagram captions, email campaign, Facebook ad, and Twitter posts. Use when the user asks for marketing, promotion, campaign, launch copy, captions, or ad content.",
+      "Generate marketing copy for a product: Instagram captions, email campaign, Facebook ad, and Twitter posts. Use when the user asks for marketing, promotion, campaign, launch copy, captions, or ad content. IMPORTANT: before calling this tool, you MUST call printify_generate_mockups first to get lifestyle mockup photos — marketing campaigns need visuals.",
     parameters: {
       type: "OBJECT",
       properties: {
