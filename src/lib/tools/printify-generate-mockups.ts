@@ -113,11 +113,10 @@ async function uploadImage(
 }
 
 /**
- * Select the print provider with the most mockup-image variety.
- * More mockup images usually means the provider includes lifestyle /
- * model shots alongside flat-lay product photos.
- * Falls back to the first provider when the catalog endpoint is
- * unavailable or returns nothing useful.
+ * Select the first available print provider for the given blueprint.
+ * Note: Printify v1 API does not expose a mockup-images catalog endpoint,
+ * so all providers return the same flat-lay product shots (front/back).
+ * Lifestyle / model mockups are handled separately via AI image generation.
  */
 async function selectPrintProvider(blueprintId: number): Promise<number> {
   const providers = await printifyRequest<PrintifyPrintProvider[]>(
@@ -128,26 +127,7 @@ async function selectPrintProvider(blueprintId: number): Promise<number> {
     throw new Error(`No print providers found for blueprint ${blueprintId}.`);
   }
 
-  // Check up to 5 providers for mockup variety
-  const candidates = providers.slice(0, 5);
-  let bestId = candidates[0].id;
-  let bestCount = 0;
-
-  for (const p of candidates) {
-    try {
-      const mockups = await printifyRequest<unknown[]>(
-        `/catalog/blueprints/${blueprintId}/print_providers/${p.id}/mockup-images.json`,
-      );
-      if (Array.isArray(mockups) && mockups.length > bestCount) {
-        bestCount = mockups.length;
-        bestId = p.id;
-      }
-    } catch {
-      // Endpoint may not exist for this provider — skip
-    }
-  }
-
-  return bestId;
+  return providers[0].id;
 }
 
 async function getDefaultVariantIds(

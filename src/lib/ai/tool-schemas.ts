@@ -299,7 +299,7 @@ export const toolFunctionDeclarations: any[] = [
   {
     name: "generate_marketing_copy",
     description:
-      "Generate marketing copy for a product: Instagram captions, email campaign, Facebook ad, and Twitter posts. Use when the user asks for marketing, promotion, campaign, launch copy, captions, or ad content. IMPORTANT: before calling this tool, you MUST call printify_generate_mockups first to get lifestyle mockup photos — marketing campaigns need visuals.",
+      "Generate marketing copy for a product: Instagram captions, email campaign, Facebook ad, and Twitter posts. Use when the user asks for marketing, promotion, campaign, launch copy, captions, or ad content. IMPORTANT: before calling this tool, you MUST call generate_product_image first with a lifestyle-style prompt to create marketing photos (e.g. 'lifestyle photo of a person wearing [product]'). Marketing campaigns need visuals.",
     parameters: {
       type: "OBJECT",
       properties: {
