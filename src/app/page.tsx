@@ -16,7 +16,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
-import { ShamsELogo } from "@/components/ui/shams-e-logo";
+import { OrpheusLogo } from "@/components/ui/orpheus-logo";
 
 const ShaderAnimation = dynamic(
   () =>
@@ -67,12 +67,12 @@ function Navbar() {
     >
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <ShamsELogo size={22} />
+          <OrpheusLogo size={22} />
           <span
             className="text-[15px] tracking-[-0.01em] text-[#e8e4de]"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Shams-E
+            Orpheus
           </span>
         </div>
 
@@ -154,7 +154,7 @@ function HeroSection() {
           transition={{ duration: 0.8, delay: 0.35 }}
           className="mt-8 max-w-lg text-center text-[15px] font-light leading-[1.7] text-white/35"
         >
-          Describe what you want to sell. Shams-E researches the market, writes
+          Describe what you want to sell. Orpheus researches the market, writes
           the listings, and publishes to your Shopify store. One conversation.
         </motion.p>
 
@@ -364,7 +364,7 @@ const steps = [
     n: "01",
     icon: MessageSquare,
     title: "Describe",
-    body: "Tell Shams-E what you want to sell. A product, a niche, a half-formed idea. Natural language is all you need.",
+    body: "Tell Orpheus what you want to sell. A product, a niche, a half-formed idea. Natural language is all you need.",
   },
   {
     n: "02",
@@ -453,7 +453,7 @@ function CTASection() {
 
           <Reveal delay={0.15}>
             <p className="mt-8 max-w-md text-[15px] font-light leading-[1.7] text-white/30">
-              No credit card. No setup. Just tell Shams-E what you want to sell.
+              No credit card. No setup. Just tell Orpheus what you want to sell.
             </p>
           </Reveal>
 
@@ -481,12 +481,12 @@ function Footer() {
     <footer className="border-t border-white/[0.06]">
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 px-6 py-8 md:flex-row">
         <div className="flex items-center gap-2">
-          <ShamsELogo size={16} className="opacity-30" />
+          <OrpheusLogo size={16} className="opacity-30" />
           <span
             className="text-[14px] text-white/20"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Shams-E
+            Orpheus
           </span>
         </div>
 

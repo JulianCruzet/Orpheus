@@ -184,7 +184,7 @@ export async function shopifyUpdateProduct(
       body_html: input.bodyHtml,
       status: input.status ?? "active",
       tags: input.tags?.join(", "),
-      vendor: input.vendor ?? "Shams-E",
+      vendor: input.vendor ?? "Orpheus",
     };
 
     return {
@@ -199,7 +199,7 @@ export async function shopifyUpdateProduct(
             title: "Mock Product",
             bodyHtml: "Mock description",
             status: "active",
-            vendor: "Shams-E",
+            vendor: "Orpheus",
             tags: ["mock", "demo"],
           },
           summary: "run shopify_update_product with this input to restore previous values.",

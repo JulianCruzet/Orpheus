@@ -1,4 +1,4 @@
-# SHAMS-E — Cursor for E-Commerce
+# ORPHEUS — Cursor for E-Commerce
 
 **Product Requirements Document**
 v1.0 • March 4, 2026 • Hackathon Build
@@ -8,11 +8,11 @@ Deadline: March 10, 2026 • Team: 2–3 people
 
 ## 1. Executive Summary
 
-Shams-E is an AI-powered e-commerce agent that acts as a co-pilot for Shopify store owners and aspiring entrepreneurs. Think of it as Cursor, but instead of helping you write code, it helps you build, run, and grow an online store.
+Orpheus is an AI-powered e-commerce agent that acts as a co-pilot for Shopify store owners and aspiring entrepreneurs. Think of it as Cursor, but instead of helping you write code, it helps you build, run, and grow an online store.
 
 The agent provides a conversational chat interface backed by a rich toolkit of integrated capabilities: direct Shopify store management, market research, AI-generated product listings and mockups, marketing campaign creation, and more. It bridges the gap between having a business idea and running a profitable store by eliminating the steep learning curve that kills most e-commerce ventures before they start.
 
-**One-liner:** *"Tell Shams-E what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window."*
+**One-liner:** *"Tell Orpheus what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window."*
 
 ---
 
@@ -40,7 +40,7 @@ Launching an e-commerce business requires expertise across dozens of domains: pr
 
 ## 3. Product Vision & Principles
 
-Shams-E is the AI co-founder every e-commerce entrepreneur deserves. It should feel like having a seasoned e-commerce operator next to you — one who can not only advise but actually execute actions on your store in real time.
+Orpheus is the AI co-founder every e-commerce entrepreneur deserves. It should feel like having a seasoned e-commerce operator next to you — one who can not only advise but actually execute actions on your store in real time.
 
 ### 3.1 Core Principles
 
@@ -84,7 +84,7 @@ Simple, debuggable, zero framework abstractions. If you want MCP later, the tool
 
 ## 5. Agent Architecture
 
-Shams-E follows a tool-augmented conversational agent pattern. The LLM acts as the reasoning core: it receives user messages, plans multi-step workflows, dispatches tool calls, and synthesizes results into responses with actionable next steps.
+Orpheus follows a tool-augmented conversational agent pattern. The LLM acts as the reasoning core: it receives user messages, plans multi-step workflows, dispatches tool calls, and synthesizes results into responses with actionable next steps.
 
 ### 5.1 Core Components
 
@@ -155,7 +155,7 @@ Primary demo scenarios. The hackathon presentation should walk through at least 
 
 ### 7.1 Flow 1: Zero-to-Store (Hero Demo)
 
-*User has an idea but no store. Shams-E takes them from concept to live products.*
+*User has an idea but no store. Orpheus takes them from concept to live products.*
 
 - User: "I want to sell handmade ceramic mugs. Help me get started."
 - Agent calls `research_market` — returns market size, competitor count, average pricing, trending styles.

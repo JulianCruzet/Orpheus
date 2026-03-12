@@ -1,12 +1,12 @@
 /**
  * Option A: Shopping bag — clean, iconic, reads as commerce instantly.
- * Option B (ShamsELogoCursor): Cart + cursor — automation meets commerce.
+ * Option B (OrpheusLogoCursor): Cart + cursor — automation meets commerce.
  *
  * Switch the default export or use either by name.
  */
 
 /* ── Option A: Shopping Bag ── */
-export function ShamsELogo({
+export function OrpheusLogo({
   size = 24,
   className = "",
 }: {
@@ -39,7 +39,7 @@ export function ShamsELogo({
 }
 
 /* ── Option B: Cart + Cursor ── */
-export function ShamsELogoCursor({
+export function OrpheusLogoCursor({
   size = 24,
   className = "",
 }: {

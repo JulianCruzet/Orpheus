@@ -11,7 +11,7 @@ export type StorageSelection = {
 export const storageSelection: StorageSelection = {
   database: STORAGE_DRIVER,
   orm: ORM_DRIVER,
-  filePath: "./data/shams-e.sqlite",
+  filePath: "./data/orpheus.sqlite",
   rationale:
     "sqlite + drizzle offers fast local setup, deterministic demos, and lightweight deployment for MVP.",
 };

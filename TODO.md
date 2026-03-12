@@ -1,4 +1,4 @@
-# Shams-E Implementation TODOs
+# Orpheus Implementation TODOs
 
 last updated: 2026-03-06
 owner: julian + ali (+ faye support)

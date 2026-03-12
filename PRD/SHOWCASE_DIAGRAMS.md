@@ -1,4 +1,4 @@
-# Shams-E Showcase Diagrams
+# Orpheus Showcase Diagrams
 
 these are presentation-ready mermaid diagrams you can paste into Notion, GitHub, or Mermaid Live.
 

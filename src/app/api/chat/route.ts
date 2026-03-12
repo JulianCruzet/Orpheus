@@ -246,7 +246,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         // This marker is only kept so mergeMessages can identify system entries.
         const systemPrompt: ChatMessage = {
           role: "system",
-          content: "shams-e ecommerce copilot",
+          content: "orpheus ecommerce copilot",
         };
 
         const restoredConversation = mergeMessages(existingMessages, body.messages);

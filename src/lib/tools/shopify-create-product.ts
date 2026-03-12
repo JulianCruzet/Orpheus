@@ -145,7 +145,7 @@ function mockCreatedProduct(input: ShopifyCreateProductInput): ShopifyCreatedPro
     title: input.title.trim(),
     status: input.status ?? "active",
     handle: input.title.trim().toLowerCase().replace(/\s+/g, "-"),
-    vendor: input.vendor ?? "Shams-E",
+    vendor: input.vendor ?? "Orpheus",
   };
 }
 

@@ -1,10 +1,10 @@
-# CLAUDE.md — Shams-E
+# CLAUDE.md — Orpheus
 
 ## Project Overview
 
-Shams-E is an AI-powered e-commerce agent ("Cursor for Shopify") — a hackathon build due **March 10, 2026**. The full PRD lives at `PRD/Shams-E_PRD.md`.
+Orpheus is an AI-powered e-commerce agent ("Cursor for Shopify") — a hackathon build due **March 10, 2026**. The full PRD lives at `PRD/Orpheus_PRD.md`.
 
-**One-liner:** Tell Shams-E what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.
+**One-liner:** Tell Orpheus what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.
 
 ## Tech Stack
 

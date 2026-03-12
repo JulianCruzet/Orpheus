@@ -1,7 +1,7 @@
-# Shams-E Architecture Slide (Hackathon)
+# Orpheus Architecture Slide (Hackathon)
 
 ## One-liner
-Shams-E is an AI commerce copilot that turns natural-language requests into safe, auditable Shopify actions with real-time chat feedback.
+Orpheus is an AI commerce copilot that turns natural-language requests into safe, auditable Shopify actions with real-time chat feedback.
 
 ## Architecture (single-slide version)
 

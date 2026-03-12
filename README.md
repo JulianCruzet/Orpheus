@@ -1,8 +1,49 @@
-# Shams-E
+# Orpheus
 
 **AI-Powered E-Commerce Copilot for Shopify**
 
-Tell Shams-E what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.
+Tell Orpheus what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  U[User in Chat UI] --> FE[Next.js /app/chat]
+  FE --> API[/POST /api/chat (streaming SSE)/]
+  API --> AGENT[Agent Loop
+  prompt + history + tool planning]
+
+  AGENT --> TR[Tool Registry]
+  TR --> ST[Shopify Tools
+  products/inventory/orders]
+  TR --> AT[AI Tools
+  listing + market + competitors]
+
+  ST --> SHOP[(Shopify Admin API)]
+  AT --> MODEL[(Gemini 2.5 Flash)]
+
+  AGENT --> DB[(SQLite + Drizzle
+  conversations/messages/action_log)]
+  AGENT --> FE
+
+  DB --> FE
+```
+
+### How it works
+
+1. User sends a message in the chat workspace
+2. Frontend POSTs conversation state to `/api/chat`
+3. Agent loop (Gemini 2.5 Flash with function-calling) plans and executes tool calls through a typed registry
+4. Each tool result is normalized, logged, and streamed back via SSE (`token`, `tool_call`, `tool_result`, `done`)
+5. Frontend renders streamed text, tool activity pills, and refreshes the dashboard on write operations
+6. Persistence stores chat history and action logs in SQLite via Drizzle
+
+### Trust & safety controls
+
+- Confirmation step for destructive/bulk actions
+- Transparent pre-action summaries
+- Redacted secrets in logs
+- Mock mode fallback for reliability
 
 ## Features
 
@@ -14,7 +55,7 @@ Tell Shams-E what you want to sell, and it builds your store, researches your ma
 - **Inventory & Orders** — Monitor stock levels, view orders, manage fulfillment
 - **Discounts & Collections** — Create discount codes and organize collections
 - **Product Listing Generation** — AI-generated titles, descriptions, tags, SEO metadata, and pricing suggestions
-- **Mock Mode** — Full demo flow with seeded data when Shopify credentials aren't available
+- **Mock Mode** — Full flow with seeded data when Shopify credentials aren't available
 
 ## Tech Stack
 
@@ -51,7 +92,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 MOCK_MODE=true
 ```
 
-Set `MOCK_MODE=true` to run with seeded demo data (no Shopify credentials needed).
+Set `MOCK_MODE=true` to run with seeded data (no Shopify credentials needed).
 
 ### Development
 
@@ -82,7 +123,7 @@ src/
       dashboard-panel.tsx     # Store dashboard with metrics, products, orders
       chat-sidebar.tsx        # AI chat with SSE streaming + tool activity
     ui/
-      shams-e-logo.tsx        # Brand logo SVG component
+      orpheus-logo.tsx        # Brand logo SVG component
       shader-animation.tsx    # WebGL ring shader
       spotlight.tsx           # SVG spotlight effect
   lib/
@@ -91,20 +132,8 @@ src/
       tool-schemas.ts         # JSON Schema definitions for all 12 tools
     tools/
       registry.ts             # Tool registry and execution engine
-      mock-tools.ts           # Mock mode handlers with seeded data
       ...                     # Individual tool implementations
     db/                       # Conversation and action log persistence
     security/                 # Input redaction utilities
     supabase/                 # Supabase client configuration
 ```
-
-## Architecture
-
-1. User sends a message in the chat sidebar
-2. Frontend POSTs conversation to `/api/chat`
-3. API runs the Gemini agent loop:
-   - Conversation history + system prompt sent to Gemini 2.5 Flash
-   - Gemini decides to call a tool or respond directly
-   - Tool results are fed back for continuation (up to 5 iterations)
-4. API streams SSE events back: `token`, `tool_call`, `tool_result`, `done`
-5. Frontend renders streamed text, tool activity pills, and refreshes dashboard on write operations

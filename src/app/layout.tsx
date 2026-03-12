@@ -22,11 +22,11 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shams-E — Your AI E-Commerce Co-Pilot",
+  title: "Orpheus — Your AI E-Commerce Co-Pilot",
   description:
-    "Tell Shams-E what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.",
+    "Tell Orpheus what you want to sell, and it builds your store, researches your market, creates your listings, and launches your marketing — all from a single chat window.",
   openGraph: {
-    title: "Shams-E — Your AI E-Commerce Co-Pilot",
+    title: "Orpheus — Your AI E-Commerce Co-Pilot",
     description:
       "The AI co-founder every e-commerce entrepreneur deserves. From idea to live Shopify store in one conversation.",
     type: "website",

@@ -92,7 +92,7 @@ export function ChatSidebar({
       id: "intro",
       role: "assistant",
       content:
-        "hey! i'm shams-e, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?",
+        "hey! i'm orpheus, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?",
     },
   ]);
   const [draft, setDraft] = useState("");
@@ -349,7 +349,7 @@ export function ChatSidebar({
         id: "intro",
         role: "assistant",
         content:
-          "hey! i'm shams-e, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?",
+          "hey! i'm orpheus, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?",
       },
     ]);
     setDraft("");
@@ -627,7 +627,7 @@ export function ChatSidebar({
         <form onSubmit={handleSubmit} className="relative">
           <input
             type="text"
-            placeholder="Ask Shams-E..."
+            placeholder="Ask Orpheus..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={isStreaming}

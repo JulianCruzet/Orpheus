@@ -55,7 +55,7 @@ function ExpansionHero() {
       mediaSrc="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1280&auto=format&fit=crop"
       bgImageSrc="https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1920&auto=format&fit=crop"
       title="Your AI Co-Founder"
-      date="Shams-E"
+      date="Orpheus"
       scrollToExpand="Scroll to explore"
       textBlend
     >
@@ -76,7 +76,7 @@ function ExpansionHero() {
           <span className="italic text-[#5EEAD4]">One conversation.</span>
         </h2>
         <p className="text-[15px] font-light leading-[1.8] text-white/40 max-w-lg mx-auto mb-10">
-          Describe what you want to sell. Shams-E researches the market, writes
+          Describe what you want to sell. Orpheus researches the market, writes
           the listings, sets pricing, and publishes to your Shopify store — all
           through natural language.
         </p>
@@ -135,7 +135,7 @@ const featureRows = [
     tag: "Research",
     title: "Market intelligence\non autopilot.",
     description:
-      "Shams-E scrapes competitor stores, analyzes Google Trends, and pulls pricing data across your niche. You get a full competitive landscape before you list a single product.",
+      "Orpheus scrapes competitor stores, analyzes Google Trends, and pulls pricing data across your niche. You get a full competitive landscape before you list a single product.",
     bullets: [
       "Competitor pricing analysis",
       "Trending product discovery",
@@ -271,7 +271,7 @@ const steps = [
     n: "01",
     icon: MessageSquare,
     title: "Describe",
-    body: "Tell Shams-E what you want to sell. A product, a niche, a half-formed idea. Natural language is all it takes.",
+    body: "Tell Orpheus what you want to sell. A product, a niche, a half-formed idea. Natural language is all it takes.",
   },
   {
     n: "02",
@@ -396,7 +396,7 @@ function CTASection() {
 
           <Reveal delay={0.15}>
             <p className="mt-8 max-w-md text-[15px] font-light leading-[1.7] text-white/30">
-              Join the beta. No credit card. No setup. Just tell Shams-E what
+              Join the beta. No credit card. No setup. Just tell Orpheus what
               you want to sell and watch it build your store.
             </p>
           </Reveal>
@@ -428,7 +428,7 @@ function Footer() {
           className="text-[14px] text-white/20"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          Shams-E
+          Orpheus
         </span>
 
         <div className="flex gap-6">

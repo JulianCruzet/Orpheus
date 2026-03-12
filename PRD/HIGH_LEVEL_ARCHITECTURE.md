@@ -1,4 +1,4 @@
-# Shams-E High-Level Architecture
+# Orpheus High-Level Architecture
 
 ```mermaid
 flowchart LR

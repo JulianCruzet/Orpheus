@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { ShamsELogo } from "@/components/ui/shams-e-logo";
+import { OrpheusLogo } from "@/components/ui/orpheus-logo";
 
 type AuthMode = "signin" | "signup";
 
@@ -142,7 +142,7 @@ export default function AuthPage() {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="mb-5 flex justify-center"
           >
-            <ShamsELogo size={40} />
+            <OrpheusLogo size={40} />
           </motion.div>
           <h1
             className="text-3xl tracking-[-0.02em]"
@@ -303,7 +303,7 @@ export default function AuthPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-[12px] text-white/15">
-          Shams-E — AI-powered commerce
+          Orpheus — AI-powered commerce
         </p>
 
         {/* Back to Home */}

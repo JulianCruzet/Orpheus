@@ -7,7 +7,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DashboardPanel } from "@/components/chat/dashboard-panel";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
-import { ShamsELogo } from "@/components/ui/shams-e-logo";
+import { OrpheusLogo } from "@/components/ui/orpheus-logo";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -87,12 +87,12 @@ export default function ChatPage() {
         className="relative z-20 flex h-12 shrink-0 items-center justify-between border-b border-white/[0.06] px-5"
       >
         <div className="flex items-center gap-3">
-          <ShamsELogo size={20} />
+          <OrpheusLogo size={20} />
           <span
             className="text-[14px] tracking-[-0.01em]"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Shams-E
+            Orpheus
           </span>
           <div className="hidden h-4 w-px bg-white/10 sm:block" />
           <span

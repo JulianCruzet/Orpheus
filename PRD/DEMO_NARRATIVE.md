@@ -1,15 +1,15 @@
-# Shams-E Demo Narrative (Judging-Aligned)
+# Orpheus Demo Narrative (Judging-Aligned)
 
 last updated: 2026-03-06
 owner: julian + ali (+ faye support)
 
 ## Demo Goal (3-5 minutes)
-Show that Shams-E is an AI commerce operator that can reason, act through tools, and produce business outcomes faster than manual workflows.
+Show that Orpheus is an AI commerce operator that can reason, act through tools, and produce business outcomes faster than manual workflows.
 
 ## Scoring Alignment
 
 ### 1) Innovation
-- Position Shams-E as an "AI teammate" instead of a single-purpose bot.
+- Position Orpheus as an "AI teammate" instead of a single-purpose bot.
 - Highlight the agent loop: reasoning + tool use + visible action trace.
 - Differentiate from normal dashboards by showing natural-language operations across multiple store tasks.
 
@@ -24,7 +24,7 @@ Show that Shams-E is an AI commerce operator that can reason, act through tools,
 
 ### 3) Functionality
 - Run one end-to-end scenario live:
-  1. Ask Shams-E to research a product niche.
+  1. Ask Orpheus to research a product niche.
   2. Generate listing copy and pricing recommendation.
   3. Publish/update product and verify in tool results.
   4. Check inventory/orders summary.
@@ -48,7 +48,7 @@ Show that Shams-E is an AI commerce operator that can reason, act through tools,
 
 ## Suggested 4-Minute Script
 - 0:00-0:30: Problem statement (manual e-commerce ops are fragmented and slow).
-- 0:30-1:00: What Shams-E is (AI commerce operator with tool execution).
+- 0:30-1:00: What Orpheus is (AI commerce operator with tool execution).
 - 1:00-3:00: Live walkthrough (research -> listing -> publish/update -> verify).
 - 3:00-3:40: Reliability + safety (mock mode, confirmations, logs).
 - 3:40-4:00: Impact + close.
