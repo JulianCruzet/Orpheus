@@ -8,22 +8,18 @@ Tell Orpheus what you want to sell, and it builds your store, researches your ma
 
 ```mermaid
 flowchart LR
-  U[User in Chat UI] --> FE[Next.js /app/chat]
-  FE --> API[/POST /api/chat (streaming SSE)/]
-  API --> AGENT[Agent Loop
-  prompt + history + tool planning]
+  U["User in Chat UI"] --> FE["Next.js Chat Workspace"]
+  FE --> API["POST api/chat — SSE stream"]
+  API --> AGENT["Agent Loop — prompt + history + tool planning"]
 
-  AGENT --> TR[Tool Registry]
-  TR --> ST[Shopify Tools
-  products/inventory/orders]
-  TR --> AT[AI Tools
-  listing + market + competitors]
+  AGENT --> TR["Tool Registry"]
+  TR --> ST["Shopify Tools — products, inventory, orders"]
+  TR --> AT["AI Tools — listings, market, competitors"]
 
-  ST --> SHOP[(Shopify Admin API)]
-  AT --> MODEL[(Gemini 2.5 Flash)]
+  ST --> SHOP[("Shopify Admin API")]
+  AT --> MODEL[("Gemini 2.5 Flash")]
 
-  AGENT --> DB[(SQLite + Drizzle
-  conversations/messages/action_log)]
+  AGENT --> DB[("SQLite + Drizzle — conversations, messages, action log")]
   AGENT --> FE
 
   DB --> FE
