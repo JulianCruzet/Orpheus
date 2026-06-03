@@ -328,4 +328,39 @@ export const toolFunctionDeclarations: any[] = [
       required: ["productName"],
     },
   },
+  {
+    name: "suggest_pricing",
+    description:
+      "Recommend an optimal price for a product based on competitor benchmarks, positioning, and margin. Use when the user asks how much to charge, what to price something at, for a pricing strategy, or to reprice an existing product. For existing products, first call shopify_list_products to get the product name and current price, then pass them here.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        productName: {
+          type: "STRING",
+          description: "Name of the product to price (e.g. 'Handmade Ceramic Mug').",
+        },
+        category: {
+          type: "STRING",
+          description: "Product category or niche for competitor context (e.g. 'home decor', 'apparel').",
+        },
+        currentPrice: {
+          type: "NUMBER",
+          description: "The product's current price in dollars, if repricing an existing product.",
+        },
+        unitCost: {
+          type: "NUMBER",
+          description: "Cost to make or source one unit, in dollars. Enables gross-margin analysis.",
+        },
+        targetAudience: {
+          type: "STRING",
+          description: "Who the product is for (e.g. 'coffee lovers', 'budget-conscious students').",
+        },
+        positioning: {
+          type: "STRING",
+          description: "Desired market positioning: 'budget', 'mid-market', or 'premium'.",
+        },
+      },
+      required: ["productName"],
+    },
+  },
 ];
