@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useVoiceInput } from "@/hooks/use-voice-input";
+import { useSpeech } from "@/hooks/use-speech";
 import { VoiceButton } from "@/components/chat/voice-button";
 
 function extractImageUrls(text: string): { cleaned: string; images: string[] } {
@@ -135,6 +136,15 @@ export function ChatSidebar({
       if (text && sendRef.current) sendRef.current(text);
     }, []),
   );
+  const {
+    speakingId,
+    toggle: toggleSpeech,
+    voices,
+    selectedVoiceName,
+    setVoice,
+    autoVoiceName,
+  } = useSpeech();
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [tools, setTools] = useState<ToolActivity[]>([]);
   const [confirmation, setConfirmation] = useState<ConfirmationState>(null);
@@ -522,6 +532,20 @@ export function ChatSidebar({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            onClick={() => setShowVoiceMenu((v) => !v)}
+            className={`rounded-md p-1.5 transition hover:bg-white/[0.06] ${
+              showVoiceMenu ? "text-[#5EEAD4]" : "text-white/30 hover:text-white/60"
+            }`}
+            title="Read-aloud voice"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+            </svg>
+          </button>
+          <button
+            type="button"
             onClick={openHistory}
             className="rounded-md p-1.5 text-white/30 transition hover:bg-white/[0.06] hover:text-white/60"
             title="Conversation history"
@@ -555,6 +579,75 @@ export function ChatSidebar({
           </button>
         </div>
       </div>
+
+      {/* Read-aloud voice picker */}
+      {showVoiceMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setShowVoiceMenu(false)}
+          />
+          <div
+            className="absolute right-3 top-12 z-40 w-64 overflow-hidden rounded-lg border border-white/10 shadow-xl"
+            style={{ backgroundColor: "#0c0c0c" }}
+          >
+            <div
+              className="border-b border-white/[0.06] px-3 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-white/30"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Read-aloud voice
+            </div>
+            <div className="max-h-64 overflow-y-auto py-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setVoice(null);
+                  setShowVoiceMenu(false);
+                }}
+                className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] transition hover:bg-white/[0.05] ${
+                  selectedVoiceName === null ? "text-[#5EEAD4]" : "text-white/70"
+                }`}
+              >
+                <span className="truncate">
+                  {autoVoiceName ? `Automatic (${autoVoiceName})` : "Automatic (best)"}
+                </span>
+                {selectedVoiceName === null && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+              {voices
+                .filter(
+                  (v) => v.name !== autoVoiceName || v.name === selectedVoiceName,
+                )
+                .map((v) => (
+                <button
+                  key={v.name}
+                  type="button"
+                  onClick={() => {
+                    setVoice(v.name);
+                    setShowVoiceMenu(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] transition hover:bg-white/[0.05] ${
+                    selectedVoiceName === v.name ? "text-[#5EEAD4]" : "text-white/70"
+                  }`}
+                >
+                  <span className="truncate">{v.name}</span>
+                  {selectedVoiceName === v.name && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+              {voices.length === 0 && (
+                <p className="px-3 py-2 text-[12px] text-white/30">loading voices…</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Conversation history panel */}
       {showHistory && (
@@ -670,6 +763,30 @@ export function ChatSidebar({
                             />
                           ))}
                         </div>
+                      )}
+                      {cleaned.trim().length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleSpeech(msg.id, cleaned)}
+                          className={`mt-1.5 flex h-6 w-6 items-center justify-center rounded-md transition hover:bg-white/[0.06] ${
+                            speakingId === msg.id
+                              ? "text-[#5EEAD4]"
+                              : "text-white/25 hover:text-white/60"
+                          }`}
+                          title={speakingId === msg.id ? "Stop" : "Read aloud"}
+                        >
+                          {speakingId === msg.id ? (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="6" y="6" width="12" height="12" rx="1" />
+                            </svg>
+                          ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                            </svg>
+                          )}
+                        </button>
                       )}
                     </div>
                   </div>
