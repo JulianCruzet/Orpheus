@@ -8,6 +8,12 @@ import {
   buildMockPricingOutput,
   SuggestPricingInput,
 } from "@/lib/tools/suggest-pricing";
+import {
+  buildMockSuggestions,
+  normalizeSeoInput,
+  OptimizeSeoInput,
+  runSeoAudit,
+} from "@/lib/tools/optimize-seo";
 
 type MockToolHandler = (input: unknown) => Promise<ToolExecutionResult<unknown>>;
 
@@ -184,6 +190,24 @@ const mockHandlers: Record<string, MockToolHandler> = {
       `mock mode: pricing recommendation generated for "${productName}".`,
       { ...output, source: "mock" },
     );
+  },
+
+  optimize_seo: async (input) => {
+    const payload = normalizeSeoInput((input ?? {}) as OptimizeSeoInput);
+    const label = (payload.productName ?? payload.title ?? "your product").trim();
+
+    // The audit is real even in mock mode; only the rewrites are mocked.
+    const audit = runSeoAudit(payload);
+    const { contentIdeas, ...suggestions } = buildMockSuggestions(payload);
+
+    return success(`mock mode: seo audit complete for "${label}".`, {
+      seoScore: audit.seoScore,
+      issues: audit.issues,
+      keywords: audit.keywords,
+      suggestions,
+      contentIdeas,
+      source: "mock",
+    });
   },
 };
 

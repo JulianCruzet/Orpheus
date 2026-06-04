@@ -70,6 +70,8 @@ function buildActionSummary(
       return "about to generate marketing copy (instagram, email, facebook ad, twitter).";
     case "suggest_pricing":
       return "about to analyze competitor pricing and recommend an optimal price.";
+    case "optimize_seo":
+      return "about to audit the listing's seo and suggest improvements.";
     default:
       return `about to execute ${toolName}.`;
   }

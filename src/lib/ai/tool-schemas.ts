@@ -363,4 +363,37 @@ export const toolFunctionDeclarations: any[] = [
       required: ["productName"],
     },
   },
+  {
+    name: "optimize_seo",
+    description:
+      "Audit a product listing's SEO and suggest improvements (better title, meta description, tags, alt text, and content ideas). Use when the user asks to improve SEO, audit a listing, rank better in search, or optimize a product's title/description/tags. For an existing product, first call shopify_list_products to get its real title, description, and tags, then pass them here.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        title: {
+          type: "STRING",
+          description: "The product's current listing title (required). For existing products, use the real title from shopify_list_products.",
+        },
+        description: {
+          type: "STRING",
+          description: "The product's current description (HTML is fine). Pass the real description for existing products.",
+        },
+        tags: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "The product's current tags.",
+        },
+        productName: {
+          type: "STRING",
+          description: "A short name for the product, used for labeling (e.g. 'ZenFlow Desk Lamp').",
+        },
+        targetKeywords: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Keywords the user wants the product to rank for, if they mentioned any.",
+        },
+      },
+      required: ["title"],
+    },
+  },
 ];
