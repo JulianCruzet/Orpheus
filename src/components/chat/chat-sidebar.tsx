@@ -72,6 +72,34 @@ type ConfirmationState = {
   message: string;
 } | null;
 
+type ConversationSummary = {
+  id: string;
+  title: string;
+  messageCount: number;
+  updatedAt: string;
+  createdAt: string;
+};
+
+const INTRO_MESSAGE =
+  "hey! i'm orpheus, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?";
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+
+  const diffMin = Math.floor((Date.now() - then) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+
+  return new Date(iso).toLocaleDateString();
+}
+
 const quickPrompts = [
   { label: "Show Products", prompt: "list my products" },
   { label: "Market Research", prompt: "research market trends for reusable water bottles" },
@@ -98,12 +126,7 @@ export function ChatSidebar({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatBubble[]>([
-    {
-      id: "intro",
-      role: "assistant",
-      content:
-        "hey! i'm orpheus, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?",
-    },
+    { id: "intro", role: "assistant", content: INTRO_MESSAGE },
   ]);
   const [draft, setDraft] = useState("");
   const sendRef = useRef<(text: string) => void>(undefined);
@@ -117,6 +140,9 @@ export function ChatSidebar({
   const [confirmation, setConfirmation] = useState<ConfirmationState>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
 
@@ -354,19 +380,85 @@ export function ChatSidebar({
   };
 
   function handleNewChat() {
-    setMessages([
-      {
-        id: "intro",
-        role: "assistant",
-        content:
-          "hey! i'm orpheus, your e-commerce copilot. i can manage products, research markets, analyze performance, and more. what would you like to do?",
-      },
-    ]);
+    setMessages([{ id: "intro", role: "assistant", content: INTRO_MESSAGE }]);
     setDraft("");
     setTools([]);
     setConfirmation(null);
     setConversationId(null);
+    setShowHistory(false);
     conversationRef.current = [];
+  }
+
+  const fetchConversations = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(Array.isArray(data.conversations) ? data.conversations : []);
+      }
+    } catch {
+      // Leave the list empty if it can't load.
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  function openHistory() {
+    setShowHistory(true);
+    fetchConversations();
+  }
+
+  async function loadConversation(id: string) {
+    try {
+      const res = await fetch(`/api/conversations/${id}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const persisted: { role: string; content: string }[] = Array.isArray(data.messages)
+        ? data.messages
+        : [];
+
+      // Keep the full raw history so the model can continue the conversation.
+      conversationRef.current = persisted.map((m) => ({ role: m.role, content: m.content }));
+
+      // Build clean display bubbles — drop internal tool_call / tool messages.
+      const bubbles: ChatBubble[] = [];
+      persisted.forEach((m, i) => {
+        if (m.role === "user") {
+          bubbles.push({ id: `loaded-${i}`, role: "user", content: m.content });
+        } else if (
+          m.role === "assistant" &&
+          !m.content.startsWith("tool_call:") &&
+          !m.content.startsWith("confirmation_required:")
+        ) {
+          bubbles.push({ id: `loaded-${i}`, role: "assistant", content: m.content });
+        }
+      });
+
+      setMessages(
+        bubbles.length > 0
+          ? bubbles
+          : [{ id: "intro", role: "assistant", content: INTRO_MESSAGE }],
+      );
+      setConversationId(id);
+      setTools([]);
+      setConfirmation(null);
+      setShowHistory(false);
+    } catch {
+      // Ignore load failures — the user can pick another conversation.
+    }
+  }
+
+  async function deleteConversationItem(id: string) {
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+    } catch {
+      fetchConversations();
+    }
+    // If the open conversation was deleted, reset to a fresh chat.
+    if (id === conversationId) handleNewChat();
   }
 
   function handleSubmit(e: FormEvent) {
@@ -417,7 +509,7 @@ export function ChatSidebar({
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
       style={{ width: "400px", minWidth: "400px", maxWidth: "400px" }}
-      className="flex shrink-0 flex-col border-l border-white/[0.06]"
+      className="relative flex shrink-0 flex-col border-l border-white/[0.06]"
     >
       {/* Sidebar header */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-white/[0.06] px-4">
@@ -428,6 +520,18 @@ export function ChatSidebar({
           AI Chat
         </span>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={openHistory}
+            className="rounded-md p-1.5 text-white/30 transition hover:bg-white/[0.06] hover:text-white/60"
+            title="Conversation history"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v5h5" />
+              <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+              <path d="M12 7v5l4 2" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={handleNewChat}
@@ -451,6 +555,68 @@ export function ChatSidebar({
           </button>
         </div>
       </div>
+
+      {/* Conversation history panel */}
+      {showHistory && (
+        <div className="absolute inset-x-0 bottom-0 top-12 z-20 flex flex-col bg-[#050505]">
+          <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/[0.06] px-4">
+            <span
+              className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/30"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Conversations
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowHistory(false)}
+              className="rounded-md p-1.5 text-white/30 transition hover:bg-white/[0.06] hover:text-white/60"
+              title="Close history"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            {historyLoading ? (
+              <p className="px-3 py-4 text-[12px] text-white/30">loading…</p>
+            ) : conversations.length === 0 ? (
+              <p className="px-3 py-4 text-[12px] text-white/30">no saved conversations yet.</p>
+            ) : (
+              conversations.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => loadConversation(c.id)}
+                  className={`group flex cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 transition hover:bg-white/[0.04] ${
+                    c.id === conversationId ? "bg-white/[0.04]" : ""
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] text-white/80">{c.title}</p>
+                    <p className="text-[11px] text-white/30">
+                      {relativeTime(c.updatedAt)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversationItem(c.id);
+                    }}
+                    className="shrink-0 rounded-md p-1.5 text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white/60 group-hover:opacity-100"
+                    title="Delete conversation"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
