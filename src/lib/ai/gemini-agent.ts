@@ -83,6 +83,12 @@ tool selection rules:
 - shopify_update_product: change price, title, description, or tags. requires productId — look it up first if not known.
 - shopify_manage_inventory: read or update stock levels.
 - generate_marketing_copy: captions, email campaigns, ads, promotional content. always pass the specific platforms array (e.g. ["instagram"]). do not default to all platforms unless the user asks for multiple.
+- suggest_pricing: use when the user asks how much to charge, what to price something at, for a pricing strategy, or to reprice an existing product. ALWAYS pass the strongest pricing signals you have so the recommendation is grounded, not generic:
+  - for an EXISTING product (any product the user names that's in their catalog), you MUST first call shopify_list_products, find the product, and pass its price as currentPrice to suggest_pricing. never price an existing product without its currentPrice.
+  - if the user mentions what it costs them to make/source a unit (e.g. "i make these for $6"), pass that as unitCost.
+  - if the user implies positioning (luxury, premium, budget, cheap, value), pass positioning.
+  - if the user wants you to then apply the new price, chain into shopify_update_product.
+  - do NOT use generate_product_listing for pricing questions — that tool writes copy, not pricing strategy.
 
 formatting:
 - keep responses concise and lowercase. never show a generic help menu unless the user explicitly asks what you can do.
@@ -122,6 +128,13 @@ formatting:
   **trend:** (direction)
   **opportunity score:** X/100
   **recommendation:** (recommendation)
+- when showing a pricing recommendation from suggest_pricing, format as:
+  **suggested price:** $X.XX
+  **price range:** $min — $max
+  **competitor median:** $X.XX (range $min — $max)
+  **positioning:** (budget/mid-market/premium)
+  **strategy:** (strategy)
+  if a margin is present, add: **gross margin:** X% (at $unitCost cost)
 - when a tool fails, tell the user what went wrong in plain language and suggest what to try next. never show error codes.`;
 
 function convertRole(role: string): "user" | "model" | "function" {
@@ -232,6 +245,11 @@ const TOOL_GROUPS: Record<string, string[]> = {
   ],
   research: [
     "research_market", "research_competitors", "analyze_store_performance",
+    "suggest_pricing",
+  ],
+  pricing: [
+    "suggest_pricing", "research_competitors", "shopify_list_products",
+    "shopify_update_product",
   ],
   support: [
     "draft_customer_response",
@@ -255,6 +273,7 @@ function pickRelevantTools(conversation: ChatMessage[]): string[] | undefined {
     [/product|catalog|listing|store item|inventory|stock|order|fulfil|discount|coupon|collection|upload.*shopify|add.*shopify|put.*shopify/, "shopify"],
     [/image|logo|artwork|design|mockup|t-?shirt|mug|hoodie|merch|tote|poster|phone case|marketing|caption|campaign|email|ad\b|promo/, "creative"],
     [/market|trend|research|niche|competitor|rival|analytics|performance|revenue|sales|stats/, "research"],
+    [/\bpric(e|ing)\b|how much|what.*charge|reprice|margin|markup|undercut|too (cheap|expensive)/, "pricing"],
     [/customer|support|reply|complaint|response/, "support"],
   ];
 
@@ -464,6 +483,25 @@ function fallbackRespond(conversation: ChatMessage[]): AgentStep {
   }
 
   const text = lastUser.content.toLowerCase();
+
+  // Pricing strategy — explicit pricing intent ("how much", "charge", "pricing")
+  // is a strong signal, so check it before product-noun matching below.
+  if (
+    text.includes("how much") ||
+    text.includes("charge") ||
+    text.includes("pricing") ||
+    text.includes("reprice") ||
+    text.includes("margin") ||
+    text.includes("markup") ||
+    /\bprice\b/.test(text)
+  ) {
+    return {
+      kind: "tool_call",
+      toolName: "suggest_pricing",
+      input: { productName: lastUser.content },
+      thought: "working out an optimal price.",
+    };
+  }
 
   // Image / artwork generation — check BEFORE product matching
   if ((text.includes("image") || text.includes("graphic") || text.includes("logo") || text.includes("artwork") || text.includes("design") || text.includes("photo")) &&

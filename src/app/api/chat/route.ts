@@ -68,6 +68,8 @@ function buildActionSummary(
       return "about to draft a customer support response.";
     case "generate_marketing_copy":
       return "about to generate marketing copy (instagram, email, facebook ad, twitter).";
+    case "suggest_pricing":
+      return "about to analyze competitor pricing and recommend an optimal price.";
     default:
       return `about to execute ${toolName}.`;
   }

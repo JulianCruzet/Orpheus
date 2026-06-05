@@ -4,6 +4,10 @@ import {
   SEEDED_PRODUCTS,
 } from "@/lib/demo/seed-store";
 import { ToolExecutionResult } from "@/lib/tools/types";
+import {
+  buildMockPricingOutput,
+  SuggestPricingInput,
+} from "@/lib/tools/suggest-pricing";
 
 type MockToolHandler = (input: unknown) => Promise<ToolExecutionResult<unknown>>;
 
@@ -164,6 +168,22 @@ const mockHandlers: Record<string, MockToolHandler> = {
       healthScore: 81,
       source: "mock",
     });
+  },
+
+  suggest_pricing: async (input) => {
+    const payload = (input ?? {}) as SuggestPricingInput;
+    const productName =
+      typeof payload.productName === "string" && payload.productName.trim().length > 0
+        ? payload.productName.trim()
+        : "your product";
+
+    // Share the tool's pricing logic so mock and live paths stay in sync.
+    const output = buildMockPricingOutput(payload);
+
+    return success(
+      `mock mode: pricing recommendation generated for "${productName}".`,
+      { ...output, source: "mock" },
+    );
   },
 };
 

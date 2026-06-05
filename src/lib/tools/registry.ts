@@ -20,6 +20,7 @@ import { analyzeStorePerformance } from "@/lib/tools/analyze-store-performance";
 import { draftCustomerResponse } from "@/lib/tools/draft-customer-response";
 import { printifyGenerateMockups } from "@/lib/tools/printify-generate-mockups";
 import { generateMarketingCopy } from "@/lib/tools/generate-marketing-copy";
+import { suggestPricing } from "@/lib/tools/suggest-pricing";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -167,6 +168,12 @@ export const toolRegistry: ToolRegistry = {
     name: "generate_marketing_copy",
     description: "Generate marketing copy (Instagram, email, Facebook ad, Twitter) for a product.",
     handler: withToolLogging("generate_marketing_copy", generateMarketingCopy),
+  },
+  suggest_pricing: {
+    name: "suggest_pricing",
+    description:
+      "Recommend an optimal price for a product using competitor benchmarks, positioning, and margin.",
+    handler: withToolLogging("suggest_pricing", suggestPricing),
   },
 };
 
