@@ -281,9 +281,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-**Team:**
+**Contributors:**
 - Julian Cruzet
 - Ali Shamsi
+- Mohsin Qureshi
 
 Project Link: [https://github.com/JulianCruzet/Orpheus](https://github.com/JulianCruzet/Orpheus)
 
