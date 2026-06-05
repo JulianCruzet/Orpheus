@@ -21,6 +21,7 @@ import { draftCustomerResponse } from "@/lib/tools/draft-customer-response";
 import { printifyGenerateMockups } from "@/lib/tools/printify-generate-mockups";
 import { generateMarketingCopy } from "@/lib/tools/generate-marketing-copy";
 import { suggestPricing } from "@/lib/tools/suggest-pricing";
+import { optimizeSeo } from "@/lib/tools/optimize-seo";
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -174,6 +175,12 @@ export const toolRegistry: ToolRegistry = {
     description:
       "Recommend an optimal price for a product using competitor benchmarks, positioning, and margin.",
     handler: withToolLogging("suggest_pricing", suggestPricing),
+  },
+  optimize_seo: {
+    name: "optimize_seo",
+    description:
+      "Audit a product listing's SEO (title, description, tags, keywords) and suggest concrete improvements.",
+    handler: withToolLogging("optimize_seo", optimizeSeo),
   },
 };
 

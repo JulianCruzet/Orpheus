@@ -89,6 +89,8 @@ tool selection rules:
   - if the user implies positioning (luxury, premium, budget, cheap, value), pass positioning.
   - if the user wants you to then apply the new price, chain into shopify_update_product.
   - do NOT use generate_product_listing for pricing questions — that tool writes copy, not pricing strategy.
+- optimize_seo: use when the user asks to improve SEO, audit a listing, rank higher in search, or fix a product's title/description/tags/keywords. for an EXISTING product, you MUST first call shopify_list_products and pass the product's real title, description, and tags to optimize_seo (it needs the actual listing fields to audit, not just the name). pass targetKeywords if the user mentions any. if the user wants you to apply the improvements, chain into shopify_update_product with the suggested title/description/tags.
+  - CRITICAL: the 'title' argument must be the product's EXACT catalog title, never the user's sentence. example: the user says "audit the seo for the zenflow desk lamp" and shopify_list_products returns a product titled "ZenFlow Desk Lamp" — call optimize_seo with title="ZenFlow Desk Lamp" and its real description/tags, NOT title="audit the seo for the zenflow desk lamp". the same applies to productName.
 
 formatting:
 - keep responses concise and lowercase. never show a generic help menu unless the user explicitly asks what you can do.
@@ -135,6 +137,13 @@ formatting:
   **positioning:** (budget/mid-market/premium)
   **strategy:** (strategy)
   if a margin is present, add: **gross margin:** X% (at $unitCost cost)
+- when showing an seo audit from optimize_seo, format as:
+  **seo score:** X/100
+  **issues:** (bullet each issue's message; skip this line if there are none)
+  **suggested title:** (title)
+  **suggested meta description:** (metaDescription)
+  **suggested tags:** tag1, tag2, tag3
+  if contentIdeas are present, add a **content ideas:** bullet list. do not show the raw alt text unless asked.
 - when a tool fails, tell the user what went wrong in plain language and suggest what to try next. never show error codes.`;
 
 function convertRole(role: string): "user" | "model" | "function" {
@@ -251,6 +260,10 @@ const TOOL_GROUPS: Record<string, string[]> = {
     "suggest_pricing", "research_competitors", "shopify_list_products",
     "shopify_update_product",
   ],
+  seo: [
+    "optimize_seo", "shopify_list_products", "shopify_update_product",
+    "generate_product_listing",
+  ],
   support: [
     "draft_customer_response",
   ],
@@ -274,6 +287,7 @@ function pickRelevantTools(conversation: ChatMessage[]): string[] | undefined {
     [/image|logo|artwork|design|mockup|t-?shirt|mug|hoodie|merch|tote|poster|phone case|marketing|caption|campaign|email|ad\b|promo/, "creative"],
     [/market|trend|research|niche|competitor|rival|analytics|performance|revenue|sales|stats/, "research"],
     [/\bpric(e|ing)\b|how much|what.*charge|reprice|margin|markup|undercut|too (cheap|expensive)/, "pricing"],
+    [/\bseo\b|search engine|rank (higher|better)|keyword|meta description|optimi[sz]e.*(listing|title|description)|audit.*(listing|seo)/, "seo"],
     [/customer|support|reply|complaint|response/, "support"],
   ];
 
@@ -500,6 +514,23 @@ function fallbackRespond(conversation: ChatMessage[]): AgentStep {
       toolName: "suggest_pricing",
       input: { productName: lastUser.content },
       thought: "working out an optimal price.",
+    };
+  }
+
+  // SEO audit — explicit seo intent, check before product matching.
+  if (
+    text.includes("seo") ||
+    text.includes("search engine") ||
+    text.includes("keyword") ||
+    text.includes("meta description") ||
+    text.includes("rank higher") ||
+    text.includes("rank better")
+  ) {
+    return {
+      kind: "tool_call",
+      toolName: "optimize_seo",
+      input: { title: lastUser.content, productName: lastUser.content },
+      thought: "auditing the listing's seo.",
     };
   }
 
