@@ -4,6 +4,16 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let browserClient: SupabaseClient | null = null;
 
+export class SupabaseConfigurationError extends Error {
+  constructor() {
+    super(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    );
+
+    this.name = "SupabaseConfigurationError";
+  }
+}
+
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (browserClient) {
     return browserClient;
@@ -13,9 +23,7 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    );
+    throw new SupabaseConfigurationError();
   }
 
   browserClient = createClient(url, anonKey, {
